@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   Wifi,
   WifiOff,
+  History,
 } from 'lucide-react';
 import type { Reception, FilterTabsCount } from '../types';
 
@@ -21,6 +22,7 @@ interface ReceptionHeaderStickyProps {
   tabsCount: FilterTabsCount;
   onOpenCloseModal: () => void;
   onOpenSummaryModal: () => void;
+  onOpenHistoryModal: () => void;
   onBack: () => void;
 }
 
@@ -33,6 +35,7 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
   tabsCount,
   onOpenCloseModal,
   onOpenSummaryModal,
+  onOpenHistoryModal,
   onBack,
 }) => {
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
@@ -111,6 +114,16 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
               {isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
               <span className="hidden xs:inline">{isOnline ? 'Online' : 'Off'}</span>
             </div>
+
+            {/* History Button */}
+            <button
+              type="button"
+              onClick={onOpenHistoryModal}
+              title="Historial de acciones y cambios"
+              className="p-1.5 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#007AFF] rounded-xl text-xs font-semibold flex items-center border border-[#E5E5EA] transition-colors"
+            >
+              <History className="w-3.5 h-3.5" />
+            </button>
 
             {/* Share / Summary Button */}
             <button

@@ -30,6 +30,8 @@ import { IncidentSheet } from './IncidentSheet';
 import { ExtraItemModal } from './ExtraItemModal';
 import { CloseReceptionModal } from './CloseReceptionModal';
 import { SummaryModal } from './SummaryModal';
+import { ConfirmCompleteModal } from './ConfirmCompleteModal';
+import { ActionHistorySheet } from './ActionHistorySheet';
 
 interface ReceptionDetailViewProps {
   receptionId: string;
@@ -61,6 +63,8 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
   // Modals state
   const [activeAddCountItem, setActiveAddCountItem] = useState<ReceptionItem | null>(null);
   const [activeIncidentItem, setActiveIncidentItem] = useState<ReceptionItem | null>(null);
+  const [confirmCompleteItem, setConfirmCompleteItem] = useState<ReceptionItem | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [isExtraModalOpen, setIsExtraModalOpen] = useState<boolean>(false);
   const [isCloseModalOpen, setIsCloseModalOpen] = useState<boolean>(false);
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState<boolean>(false);
@@ -158,8 +162,16 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
   }, [items, activeTab, debouncedSearchQuery]);
 
   // Actions
-  const handleQuickComplete = async (itemId: string) => {
+  const handleRequestQuickComplete = (itemId: string) => {
+    const found = items.find((i) => i.id === itemId);
+    if (found) {
+      setConfirmCompleteItem(found);
+    }
+  };
+
+  const handleConfirmComplete = async (itemId: string) => {
     await setItemToExpectedQuantity(itemId);
+    setConfirmCompleteItem(null);
   };
 
   const handleSetManualComplete = async (itemId: string, completed: boolean) => {
@@ -231,7 +243,7 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#F2F2F7] flex flex-col pb-24">
-      {/* Unified Single Sticky Header */}
+      {/* Unified Single Sticky Header with History Button */}
       <ReceptionHeaderSticky
         reception={reception}
         searchQuery={searchQuery}
@@ -241,6 +253,7 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
         tabsCount={tabsCount}
         onOpenCloseModal={() => setIsCloseModalOpen(true)}
         onOpenSummaryModal={() => setIsSummaryModalOpen(true)}
+        onOpenHistoryModal={() => setIsHistoryOpen(true)}
         onBack={onBack}
       />
 
@@ -306,7 +319,7 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
             key={item.id}
             item={item}
             isClosed={isClosed}
-            onQuickComplete={handleQuickComplete}
+            onQuickComplete={handleRequestQuickComplete}
             onOpenAddCount={setActiveAddCountItem}
             onUndoLast={handleUndoLast}
             onOpenIncident={setActiveIncidentItem}
@@ -366,6 +379,22 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
         items={items}
         onClose={() => setIsSummaryModalOpen(false)}
         onReopen={handleReopen}
+      />
+
+      {/* Confirmation modal before marking full quantity */}
+      <ConfirmCompleteModal
+        isOpen={Boolean(confirmCompleteItem)}
+        item={confirmCompleteItem}
+        onClose={() => setConfirmCompleteItem(null)}
+        onConfirm={handleConfirmComplete}
+      />
+
+      {/* Action History / Audit Drawer */}
+      <ActionHistorySheet
+        isOpen={isHistoryOpen}
+        items={items}
+        onClose={() => setIsHistoryOpen(false)}
+        onUndoItem={handleUndoLast}
       />
     </div>
   );
