@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import type { Reception, FilterTabsCount } from '../types';
 
-export type FilterTab = 'pendientes' | 'parciales' | 'observados' | 'completos';
+export type FilterTab = 'por_revisar' | 'observados' | 'listos' | 'todos';
 
 interface ReceptionHeaderStickyProps {
   reception: Reception;
@@ -52,8 +52,10 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
 
   const totalLines = tabsCount.todos;
   const percentComplete = totalLines > 0
-    ? Math.round((tabsCount.completos / totalLines) * 100)
+    ? Math.round((tabsCount.listos / totalLines) * 100)
     : 0;
+
+  const isSearching = searchQuery.trim().length > 0;
 
   return (
     <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md text-[#1C1C1E] shadow-xs border-b border-[#E5E5EA]">
@@ -86,7 +88,7 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
                   {reception.documentType === 'DespatchAdvice' ? 'Guía' : 'Factura'} {reception.serieNumero}
                 </span>
                 <span className="text-[11px] text-[#34C759] font-bold shrink-0">
-                  {tabsCount.completos}/{totalLines} · {percentComplete}%
+                  {tabsCount.listos}/{totalLines} · {percentComplete}%
                 </span>
               </div>
               <p className="text-[10px] text-[#8E8E93] truncate leading-tight">
@@ -139,99 +141,121 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
           </div>
         </div>
 
-        {/* Search Bar with SEPARATED Large Clear Button */}
-        <div className="flex items-center gap-1.5">
-          <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 text-[#8E8E93] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar código o descripción..."
-              className="w-full text-xs bg-[#F2F2F7] text-[#1C1C1E] placeholder-[#8E8E93] pl-8 pr-2.5 py-2 rounded-xl border border-transparent focus:bg-white focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all outline-none"
-            />
+        {/* Global Search Bar with SEPARATED Large Clear Button */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-[#8E8E93] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Buscar en todos los ítems (código o nombre)..."
+                className="w-full text-xs bg-[#F2F2F7] text-[#1C1C1E] placeholder-[#8E8E93] pl-8 pr-2.5 py-2 rounded-xl border border-transparent focus:bg-white focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all outline-none"
+              />
+            </div>
+
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="h-[34px] px-2.5 bg-[#E5E5EA] hover:bg-[#D1D1D6] active:bg-[#C7C7CC] text-[#1C1C1E] font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shrink-0 shadow-2xs"
+                aria-label="Limpiar búsqueda"
+              >
+                <X className="w-3.5 h-3.5 text-[#8E8E93]" />
+                <span>Limpiar</span>
+              </button>
+            )}
           </div>
 
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange('')}
-              className="h-[34px] px-2.5 bg-[#E5E5EA] hover:bg-[#D1D1D6] active:bg-[#C7C7CC] text-[#1C1C1E] font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shrink-0 shadow-2xs"
-              aria-label="Limpiar búsqueda"
-            >
-              <X className="w-3.5 h-3.5 text-[#8E8E93]" />
-              <span>Limpiar</span>
-            </button>
+          {/* Feedback badge when global search is active */}
+          {isSearching && (
+            <div className="flex items-center justify-between px-1 text-[10px]">
+              <span className="text-[#007AFF] font-bold">
+                🔍 Búsqueda global activa (ignorando filtros de pestañas)
+              </span>
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="text-[#8E8E93] hover:text-[#1C1C1E] underline"
+              >
+                Restaurar pestañas
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Fixed 4-Column Grid Tabs without horizontal scroll: Pend. (N), Parcial (N), Obs. (N), Listos (N) */}
+        {/* Fixed 4-Column Grid Tabs: Por revisar (N), Obs. (N), Listos (N), Todos (N) */}
         <div className="grid grid-cols-4 gap-1 w-full pt-0.5">
+          {/* Tab 1: Por revisar (Pendientes + Parciales) */}
           <button
             type="button"
-            onClick={() => onTabChange('pendientes')}
+            onClick={() => onTabChange('por_revisar')}
             className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
-              activeTab === 'pendientes'
-                ? 'bg-[#8E8E93] text-white shadow-xs'
+              !isSearching && activeTab === 'por_revisar'
+                ? 'bg-[#007AFF] text-white shadow-xs'
                 : 'bg-[#E5E5EA] text-[#3A3A3C] hover:bg-[#D1D1D6]'
             }`}
           >
-            <span>Pend.</span>
+            <span>Por revisar</span>
             <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
-              activeTab === 'pendientes' ? 'bg-white/25 text-white' : 'bg-white text-[#3A3A3C]'
+              !isSearching && activeTab === 'por_revisar' ? 'bg-white/25 text-white' : 'bg-white text-[#3A3A3C]'
             }`}>
-              {tabsCount.pendientes}
+              {tabsCount.porRevisar}
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => onTabChange('parciales')}
-            className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
-              activeTab === 'parciales'
-                ? 'bg-[#FF9500] text-white shadow-xs'
-                : 'bg-[#FFF4E5] text-[#FF9500] hover:bg-[#FFE8CC]'
-            }`}
-          >
-            <span>Parcial</span>
-            <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
-              activeTab === 'parciales' ? 'bg-white/25 text-white' : 'bg-white text-[#FF9500]'
-            }`}>
-              {tabsCount.parciales}
-            </span>
-          </button>
-
+          {/* Tab 2: Obs. (Observados + Extras) */}
           <button
             type="button"
             onClick={() => onTabChange('observados')}
             className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
-              activeTab === 'observados'
+              !isSearching && activeTab === 'observados'
                 ? 'bg-[#FF3B30] text-white shadow-xs'
                 : 'bg-[#FFEBEA] text-[#FF3B30] hover:bg-[#FFD7D5]'
             }`}
           >
             <span>Obs.</span>
             <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
-              activeTab === 'observados' ? 'bg-white/25 text-white' : 'bg-white text-[#FF3B30]'
+              !isSearching && activeTab === 'observados' ? 'bg-white/25 text-white' : 'bg-white text-[#FF3B30]'
             }`}>
               {tabsCount.observados}
             </span>
           </button>
 
+          {/* Tab 3: Listos (100% Completados) */}
           <button
             type="button"
-            onClick={() => onTabChange('completos')}
+            onClick={() => onTabChange('listos')}
             className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
-              activeTab === 'completos'
+              !isSearching && activeTab === 'listos'
                 ? 'bg-[#34C759] text-white shadow-xs'
                 : 'bg-[#EBF9EE] text-[#34C759] hover:bg-[#D5F5DA]'
             }`}
           >
             <span>Listos</span>
             <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
-              activeTab === 'completos' ? 'bg-white/25 text-white' : 'bg-white text-[#34C759]'
+              !isSearching && activeTab === 'listos' ? 'bg-white/25 text-white' : 'bg-white text-[#34C759]'
             }`}>
-              {tabsCount.completos}
+              {tabsCount.listos}
+            </span>
+          </button>
+
+          {/* Tab 4: Todos (Todos los ítems sin filtrar) */}
+          <button
+            type="button"
+            onClick={() => onTabChange('todos')}
+            className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
+              !isSearching && activeTab === 'todos'
+                ? 'bg-[#8E8E93] text-white shadow-xs'
+                : 'bg-[#E5E5EA] text-[#3A3A3C] hover:bg-[#D1D1D6]'
+            }`}
+          >
+            <span>Todos</span>
+            <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
+              !isSearching && activeTab === 'todos' ? 'bg-white/25 text-white' : 'bg-white text-[#3A3A3C]'
+            }`}>
+              {tabsCount.todos}
             </span>
           </button>
         </div>

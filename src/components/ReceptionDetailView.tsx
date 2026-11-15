@@ -55,8 +55,8 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const debouncedSearchQuery = useDebounce(searchQuery, 280);
 
-  // Default tab is 'pendientes' so completed items instantly vanish from view
-  const [activeTab, setActiveTab] = useState<FilterTab>('pendientes');
+  // Default active tab is 'por_revisar' (Pendientes + Parciales)
+  const [activeTab, setActiveTab] = useState<FilterTab>('por_revisar');
 
   // Modals state
   const [activeAddCountItem, setActiveAddCountItem] = useState<ReceptionItem | null>(null);
@@ -71,35 +71,32 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
     return sortItemsNaturally(rawItems);
   }, [rawItems]);
 
-  // Compute 4 tabs counts: Pendientes, Parciales, Observados/Extras, Listos/Completos
+  // Compute 4 tabs counts: Por revisar, Observados, Listos, Todos
   const tabsCount: FilterTabsCount = useMemo(() => {
     if (!items) {
-      return { todos: 0, pendientes: 0, parciales: 0, observados: 0, completos: 0 };
+      return { porRevisar: 0, observados: 0, listos: 0, todos: 0 };
     }
 
-    let pendientes = 0;
-    let parciales = 0;
+    let porRevisar = 0;
     let observados = 0;
-    let completos = 0;
+    let listos = 0;
 
     items.forEach((item) => {
-      if (item.isExtra || item.status === 'observado' || item.status === 'extra') {
+      if (item.isExtra || item.status === 'observado' || item.status === 'extra' || item.incidentType !== 'ninguno') {
         observados++;
       } else if (item.status === 'completo') {
-        completos++;
-      } else if (item.status === 'parcial') {
-        parciales++;
+        listos++;
       } else {
-        pendientes++;
+        // Pendiente o Parcial
+        porRevisar++;
       }
     });
 
     return {
-      todos: items.length,
-      pendientes,
-      parciales,
+      porRevisar,
       observados,
-      completos,
+      listos,
+      todos: items.length,
     };
   }, [items]);
 
@@ -127,30 +124,37 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
   const filteredItems = useMemo(() => {
     if (!items) return [];
 
-    let result = items;
-
-    // 1. Tab filter (4 fixed categories)
-    if (activeTab === 'pendientes') {
-      result = result.filter((i) => !i.isExtra && i.status === 'pendiente');
-    } else if (activeTab === 'parciales') {
-      result = result.filter((i) => !i.isExtra && i.status === 'parcial');
-    } else if (activeTab === 'observados') {
-      result = result.filter((i) => i.isExtra || i.status === 'observado' || i.status === 'extra');
-    } else if (activeTab === 'completos') {
-      result = result.filter((i) => !i.isExtra && i.status === 'completo');
-    }
-
-    // 2. Multi-token search filter (debounced)
     const query = debouncedSearchQuery.trim().toLowerCase();
+
+    // 1. Buscador Global: Si hay texto en el input, busca en TODOS los ítems ignorando el filtro de pestaña
     if (query) {
       const tokens = query.split(/\s+/).filter(Boolean);
-      result = result.filter((item) => {
-        const searchable = `${item.itemCode} ${item.description} ${item.lineId} ${item.observations} ${item.unitName}`.toLowerCase();
+      return items.filter((item) => {
+        const searchable = `${item.itemCode} ${item.description} ${item.lineId} ${item.observations} ${item.unitName} ${item.status}`.toLowerCase();
         return tokens.every((token) => searchable.includes(token));
       });
     }
 
-    return result;
+    // 2. Si el buscador está vacío, aplica la pestaña seleccionada:
+    if (activeTab === 'por_revisar') {
+      // Muestra juntos Pendientes y Parciales (sólo salen cuando llegan al 100% Listos o son Observados)
+      return items.filter(
+        (i) => !i.isExtra && i.status !== 'completo' && i.status !== 'observado' && i.status !== 'extra' && i.incidentType === 'ninguno'
+      );
+    } else if (activeTab === 'observados') {
+      // Dañados, faltantes, sobrantes y productos extras
+      return items.filter(
+        (i) => i.isExtra || i.status === 'observado' || i.status === 'extra' || i.incidentType !== 'ninguno'
+      );
+    } else if (activeTab === 'listos') {
+      // 100% completados
+      return items.filter(
+        (i) => !i.isExtra && i.status === 'completo' && i.incidentType === 'ninguno'
+      );
+    }
+
+    // activeTab === 'todos'
+    return items;
   }, [items, activeTab, debouncedSearchQuery]);
 
   // Actions
@@ -277,8 +281,8 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
               <p className="text-[11px] text-[#8E8E93] mt-0.5 max-w-xs mx-auto">
                 {searchQuery
                   ? '¿La mercadería llegó físicamente pero no figura en la guía o factura del proveedor?'
-                  : activeTab === 'pendientes'
-                  ? '¡Genial! No quedan productos pendientes en esta vista.'
+                  : activeTab === 'por_revisar'
+                  ? '¡Excelente! Todos los productos de esta lista ya fueron completados u observados.'
                   : 'Cambia de pestaña o realiza una búsqueda para ver los productos.'}
               </p>
             </div>
@@ -296,7 +300,7 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
           </div>
         )}
 
-        {/* List of Product Cards (Compact iOS Style, showing 3-4 cards per screen) */}
+        {/* List of Product Cards */}
         {filteredItems.map((item) => (
           <ProductCard
             key={item.id}

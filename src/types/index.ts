@@ -131,9 +131,8 @@ export interface RecepcionPOSPayload {
 }
 
 export interface FilterTabsCount {
-  todos: number;
-  pendientes: number;
-  parciales: number;
+  porRevisar: number;
   observados: number;
-  completos: number;
+  listos: number;
+  todos: number;
 }
