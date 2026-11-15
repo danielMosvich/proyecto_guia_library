@@ -42,9 +42,12 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
   receptionId,
   onBack,
 }) => {
-  // Live queries from Dexie
+  // Live queries from Dexie with explicit null when not found
   const reception = useLiveQuery(
-    () => db.receptions.get(receptionId),
+    async () => {
+      const rec = await db.receptions.get(receptionId);
+      return rec ?? null;
+    },
     [receptionId]
   );
 
@@ -104,14 +107,22 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
     };
   }, [items]);
 
-  // Check 100% completion celebration
+  // Check 100% completion celebration (fires only once per completion)
   const isAllComplete = useMemo(() => {
     if (!items || items.length === 0) return false;
     return items.every((item) => item.isExtra || item.status === 'completo');
   }, [items]);
 
+  const hasCelebratedRef = React.useRef(false);
+
   useEffect(() => {
-    if (isAllComplete && reception?.status === 'en_proceso' && items && items.length > 0) {
+    if (!isAllComplete) {
+      hasCelebratedRef.current = false;
+      return;
+    }
+
+    if (isAllComplete && !hasCelebratedRef.current && reception?.status === 'en_proceso' && items && items.length > 0) {
+      hasCelebratedRef.current = true;
       try {
         confetti({
           particleCount: 80,
@@ -122,7 +133,7 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
         // Safe check
       }
     }
-  }, [isAllComplete, reception?.status, items]);
+  }, [isAllComplete, reception?.status, items?.length]);
 
   // Multi-token search with debounced value & natural sort
   const filteredItems = useMemo(() => {
@@ -170,12 +181,22 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
   };
 
   const handleConfirmComplete = async (itemId: string) => {
-    await setItemToExpectedQuantity(itemId);
-    setConfirmCompleteItem(null);
+    try {
+      await setItemToExpectedQuantity(itemId);
+    } catch (err) {
+      console.error('Error al completar ítem:', err);
+      alert('Error al guardar en base de datos local');
+    } finally {
+      setConfirmCompleteItem(null);
+    }
   };
 
   const handleSetManualComplete = async (itemId: string, completed: boolean) => {
-    await setItemManualComplete(itemId, completed);
+    try {
+      await setItemManualComplete(itemId, completed);
+    } catch (err) {
+      console.error('Error al actualizar estado manual:', err);
+    }
   };
 
   const handleAddCountConfirm = async (
@@ -187,24 +208,39 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
     manualFactor?: number
   ) => {
     if (!activeAddCountItem) return;
-    await addItemCount(
-      activeAddCountItem.id,
-      amountToAdd,
-      rawInput,
-      unitUsed,
-      boxTag,
-      isLooseUnit,
-      manualFactor
-    );
+    const targetId = activeAddCountItem.id;
+    try {
+      await addItemCount(
+        targetId,
+        amountToAdd,
+        rawInput,
+        unitUsed,
+        boxTag,
+        isLooseUnit,
+        manualFactor
+      );
+    } catch (err) {
+      console.error('Error al sumar conteo:', err);
+      alert('No se pudo registrar el conteo en almacenamiento local');
+    }
   };
 
   const handleUndoLast = async (itemId: string) => {
-    await undoLastPartialCount(itemId);
+    try {
+      await undoLastPartialCount(itemId);
+    } catch (err) {
+      console.error('Error al deshacer último conteo:', err);
+    }
   };
 
   const handleIncidentSave = async (incidentType: IncidentType, observations: string) => {
     if (!activeIncidentItem) return;
-    await updateItemIncident(activeIncidentItem.id, incidentType, observations);
+    const targetId = activeIncidentItem.id;
+    try {
+      await updateItemIncident(targetId, incidentType, observations);
+    } catch (err) {
+      console.error('Error al guardar incidencia:', err);
+    }
   };
 
   const handleExtraItemConfirm = async (data: {
@@ -216,25 +252,65 @@ export const ReceptionDetailView: React.FC<ReceptionDetailViewProps> = ({
     reason: ExtraReason;
     observations?: string;
   }) => {
-    await addExtraItem(receptionId, data);
-    setActiveTab('observados');
-    setSearchQuery('');
+    try {
+      await addExtraItem(receptionId, data);
+      setActiveTab('observados');
+      setSearchQuery('');
+    } catch (err) {
+      console.error('Error al registrar producto extra:', err);
+      alert('No se pudo registrar el producto extra');
+    }
   };
 
   const handleConfirmClose = async (notes?: string, autoMarkMissing?: boolean) => {
-    await closeReception(receptionId, notes, autoMarkMissing);
-    setIsCloseModalOpen(false);
-    setIsSummaryModalOpen(true);
+    try {
+      await closeReception(receptionId, notes, autoMarkMissing);
+      setIsCloseModalOpen(false);
+      setIsSummaryModalOpen(true);
+    } catch (err) {
+      console.error('Error al cerrar recepción:', err);
+      alert('Error al cerrar formalmente la recepción');
+    }
   };
 
   const handleReopen = async () => {
-    await reopenReception(receptionId);
+    try {
+      await reopenReception(receptionId);
+    } catch (err) {
+      console.error('Error al reabrir recepción:', err);
+    }
   };
 
-  if (!reception || !items) {
+  if (reception === undefined || rawItems === undefined) {
     return (
-      <div className="p-8 text-center text-[#8E8E93] text-xs">
-        Cargando datos de la recepción...
+      <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center p-6 text-center">
+        <div className="bg-white border border-[#E5E5EA] rounded-2xl p-6 shadow-xs max-w-sm w-full space-y-3 animate-pulse">
+          <div className="w-10 h-10 rounded-full bg-[#E5E5EA] mx-auto" />
+          <div className="h-4 bg-[#E5E5EA] rounded-md w-36 mx-auto" />
+          <p className="text-xs text-[#8E8E93]">Cargando productos del almacén...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (reception === null) {
+    return (
+      <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center p-6 text-center">
+        <div className="bg-white border border-[#E5E5EA] rounded-2xl p-6 shadow-xs max-w-sm w-full space-y-3">
+          <div className="w-10 h-10 rounded-full bg-[#FFEBEA] text-[#FF3B30] flex items-center justify-center mx-auto">
+            <AlertCircle className="w-5 h-5" />
+          </div>
+          <h3 className="font-bold text-sm text-[#1C1C1E]">Recepción no encontrada</h3>
+          <p className="text-xs text-[#8E8E93]">
+            No se encontró el comprobante en la memoria del dispositivo. Puede haber sido eliminado.
+          </p>
+          <button
+            onClick={onBack}
+            className="w-full py-2.5 px-4 bg-[#007AFF] text-white text-xs font-bold rounded-xl shadow-xs"
+          >
+            Volver a la Lista
+          </button>
+        </div>
       </div>
     );
   }

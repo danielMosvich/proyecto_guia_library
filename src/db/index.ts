@@ -11,10 +11,31 @@ export class WarehouseDatabase extends Dexie {
       receptions: '&id, status, serieNumero, fechaEmision, createdAt, updatedAt',
       receptionItems: '&id, receptionId, itemCode, status, isExtra, [receptionId+status], [receptionId+isExtra]'
     });
+
+    // Gracefully handle database version changes and blocking across browser tabs
+    this.on('versionchange', () => {
+      console.warn('WarehouseDatabase: version change requested, closing gracefully.');
+      this.close();
+    });
+
+    this.on('blocked', () => {
+      console.warn('WarehouseDatabase: blocked by another connection.');
+    });
   }
 }
 
 export const db = new WarehouseDatabase();
+
+// Request persistent storage so IndexedDB is never evicted under storage pressure
+if (typeof window !== 'undefined' && 'storage' in navigator && navigator.storage.persist) {
+  navigator.storage.persist().then((persistent) => {
+    if (persistent) {
+      console.log('IndexedDB persistent storage granted.');
+    }
+  }).catch((err) => {
+    console.warn('Error requesting persistent storage:', err);
+  });
+}
 
 /**
  * Calculates current status of an item based on its received quantity vs expected
@@ -67,12 +88,14 @@ export function computeItemStatus(
 }
 
 /**
- * Saves a new reception with all its line items atomically in IndexedDB
+ * Saves a new reception with all its line items reliably and atomically in IndexedDB
  */
 export async function saveReceptionWithItems(reception: Reception, items: ReceptionItem[]): Promise<void> {
-  await db.transaction('rw', db.receptions, db.receptionItems, async () => {
+  await db.transaction('rw', [db.receptions, db.receptionItems], async () => {
     await db.receptions.put(reception);
-    await db.receptionItems.bulkPut(items);
+    if (items.length > 0) {
+      await db.receptionItems.bulkPut(items);
+    }
   });
 }
 
@@ -89,231 +112,231 @@ export async function addItemCount(
   isLooseUnit: boolean = false,
   manualFactor?: number
 ): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    const item = await db.receptionItems.get(itemId);
-    if (!item) return null;
+  const item = await db.receptionItems.get(itemId);
+  if (!item) return null;
 
-    let conversionActive = item.conversionActive;
-    let conversionFactor = item.conversionFactor;
+  let conversionActive = item.conversionActive;
+  let conversionFactor = item.conversionFactor;
 
-    if (manualFactor && manualFactor > 1) {
-      conversionActive = true;
-      conversionFactor = manualFactor;
+  if (manualFactor && manualFactor > 1) {
+    conversionActive = true;
+    conversionFactor = manualFactor;
+  }
+
+  let newReceived = item.receivedQuantity;
+  let newLoose = item.looseUnitsReceived || 0;
+
+  if (isLooseUnit) {
+    newLoose = Math.max(0, newLoose + amountToAdd);
+  } else {
+    newReceived = Math.max(0, newReceived + amountToAdd);
+  }
+
+  const newEntry: PartialCountEntry = {
+    id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    amount: amountToAdd,
+    inputAmount: rawInput,
+    unitUsed,
+    isLooseUnit,
+    boxTag: boxTag?.trim() || undefined,
+    timestamp: Date.now()
+  };
+
+  const newPartialCounts = [...(item.partialCounts || []), newEntry];
+
+  // Auto-detect surplus
+  let incident = item.incidentType;
+  if (conversionActive && conversionFactor > 1) {
+    const totalExp = item.expectedQuantity * conversionFactor;
+    const totalRec = (newReceived * conversionFactor) + newLoose;
+    if (totalRec > totalExp && !item.isExtra && incident === 'ninguno') {
+      incident = 'sobrante';
+    } else if (totalRec <= totalExp && incident === 'sobrante') {
+      incident = 'ninguno';
     }
-
-    let newReceived = item.receivedQuantity;
-    let newLoose = item.looseUnitsReceived || 0;
-
-    if (isLooseUnit) {
-      newLoose = Math.max(0, newLoose + amountToAdd);
-    } else {
-      newReceived = Math.max(0, newReceived + amountToAdd);
+  } else {
+    if (newReceived > item.expectedQuantity && !item.isExtra && incident === 'ninguno') {
+      incident = 'sobrante';
+    } else if (newReceived <= item.expectedQuantity && incident === 'sobrante') {
+      incident = 'ninguno';
     }
+  }
 
-    const newEntry: PartialCountEntry = {
-      id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      amount: amountToAdd,
-      inputAmount: rawInput,
-      unitUsed,
-      isLooseUnit,
-      boxTag: boxTag?.trim() || undefined,
-      timestamp: Date.now()
-    };
+  const newStatus = computeItemStatus(
+    newReceived,
+    item.expectedQuantity,
+    incident,
+    item.isExtra,
+    item.observations,
+    newLoose,
+    conversionActive,
+    conversionFactor,
+    item.manualCompleted || false
+  );
 
-    const newPartialCounts = [...(item.partialCounts || []), newEntry];
+  const updatedItem: ReceptionItem = {
+    ...item,
+    receivedQuantity: newReceived,
+    looseUnitsReceived: newLoose,
+    conversionActive,
+    conversionFactor,
+    partialCounts: newPartialCounts,
+    incidentType: incident,
+    status: newStatus,
+    updatedAt: Date.now()
+  };
 
-    // Auto-detect surplus
-    let incident = item.incidentType;
-    if (conversionActive && conversionFactor > 1) {
-      const totalExp = item.expectedQuantity * conversionFactor;
-      const totalRec = (newReceived * conversionFactor) + newLoose;
-      if (totalRec > totalExp && !item.isExtra && incident === 'ninguno') {
-        incident = 'sobrante';
-      } else if (totalRec <= totalExp && incident === 'sobrante') {
-        incident = 'ninguno';
-      }
-    } else {
-      if (newReceived > item.expectedQuantity && !item.isExtra && incident === 'ninguno') {
-        incident = 'sobrante';
-      } else if (newReceived <= item.expectedQuantity && incident === 'sobrante') {
-        incident = 'ninguno';
-      }
-    }
+  await db.receptionItems.put(updatedItem);
+  db.receptions.update(item.receptionId, { updatedAt: Date.now() }).catch(console.warn);
 
-    const newStatus = computeItemStatus(
-      newReceived,
-      item.expectedQuantity,
-      incident,
-      item.isExtra,
-      item.observations,
-      newLoose,
-      conversionActive,
-      conversionFactor,
-      item.manualCompleted || false
-    );
-
-    const updatedItem: ReceptionItem = {
-      ...item,
-      receivedQuantity: newReceived,
-      looseUnitsReceived: newLoose,
-      conversionActive,
-      conversionFactor,
-      partialCounts: newPartialCounts,
-      incidentType: incident,
-      status: newStatus,
-      updatedAt: Date.now()
-    };
-
-    await db.receptionItems.put(updatedItem);
-    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
-
-    return updatedItem;
-  });
+  return updatedItem;
 }
 
 /**
  * Sets an item's count to exactly the expected quantity in 1 tap (Todo / Resto).
  */
 export async function setItemToExpectedQuantity(itemId: string): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    const item = await db.receptionItems.get(itemId);
-    if (!item) return null;
+  const item = await db.receptionItems.get(itemId);
+  if (!item) return null;
 
-    const needed = item.expectedQuantity - item.receivedQuantity;
-    const amountToAdd = needed > 0 ? needed : item.expectedQuantity;
-    const newReceived = item.expectedQuantity;
+  const needed = item.expectedQuantity - item.receivedQuantity;
+  const amountToAdd = needed > 0 ? needed : item.expectedQuantity;
+  const newReceived = item.expectedQuantity;
 
-    const newEntry: PartialCountEntry = {
-      id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      amount: amountToAdd,
-      inputAmount: amountToAdd,
-      unitUsed: item.unitName,
-      boxTag: 'Resto completo',
-      timestamp: Date.now()
-    };
+  const newEntry: PartialCountEntry = {
+    id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    amount: amountToAdd,
+    inputAmount: amountToAdd,
+    unitUsed: item.unitName,
+    boxTag: 'Resto completo',
+    timestamp: Date.now()
+  };
 
-    const newPartialCounts = [...(item.partialCounts || []), newEntry];
-    const incident: IncidentType = item.incidentType === 'sobrante' || item.incidentType === 'faltante' 
-      ? 'ninguno' 
-      : item.incidentType;
+  const newPartialCounts = [...(item.partialCounts || []), newEntry];
+  const incident: IncidentType = item.incidentType === 'sobrante' || item.incidentType === 'faltante' 
+    ? 'ninguno' 
+    : item.incidentType;
 
-    const newStatus = computeItemStatus(
-      newReceived,
-      item.expectedQuantity,
-      incident,
-      item.isExtra,
-      item.observations,
-      0,
-      item.conversionActive,
-      item.conversionFactor,
-      true
-    );
+  const newStatus = computeItemStatus(
+    newReceived,
+    item.expectedQuantity,
+    incident,
+    item.isExtra,
+    item.observations,
+    0,
+    item.conversionActive,
+    item.conversionFactor,
+    true
+  );
 
-    const updatedItem: ReceptionItem = {
-      ...item,
-      receivedQuantity: newReceived,
-      looseUnitsReceived: 0,
-      manualCompleted: true,
-      partialCounts: newPartialCounts,
-      incidentType: incident,
-      status: newStatus,
-      updatedAt: Date.now()
-    };
+  const updatedItem: ReceptionItem = {
+    ...item,
+    receivedQuantity: newReceived,
+    looseUnitsReceived: 0,
+    manualCompleted: true,
+    partialCounts: newPartialCounts,
+    incidentType: incident,
+    status: newStatus,
+    updatedAt: Date.now()
+  };
 
-    await db.receptionItems.put(updatedItem);
-    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
+  await db.receptionItems.put(updatedItem);
+  db.receptions.update(item.receptionId, { updatedAt: Date.now() }).catch(console.warn);
 
-    return updatedItem;
-  });
+  return updatedItem;
 }
 
 /**
  * Manually marks an item as Complete (or toggles it), especially for mixed counts without factor.
  */
 export async function setItemManualComplete(itemId: string, completed: boolean = true): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    const item = await db.receptionItems.get(itemId);
-    if (!item) return null;
+  const item = await db.receptionItems.get(itemId);
+  if (!item) return null;
 
-    const newStatus = computeItemStatus(
-      item.receivedQuantity,
-      item.expectedQuantity,
-      item.incidentType,
-      item.isExtra,
-      item.observations,
-      item.looseUnitsReceived || 0,
-      item.conversionActive,
-      item.conversionFactor,
-      completed
-    );
+  const newStatus = computeItemStatus(
+    item.receivedQuantity,
+    item.expectedQuantity,
+    item.incidentType,
+    item.isExtra,
+    item.observations,
+    item.looseUnitsReceived || 0,
+    item.conversionActive,
+    item.conversionFactor,
+    completed
+  );
 
-    const updatedItem: ReceptionItem = {
-      ...item,
-      manualCompleted: completed,
-      status: newStatus,
-      updatedAt: Date.now()
-    };
+  const updatedItem: ReceptionItem = {
+    ...item,
+    manualCompleted: completed,
+    status: newStatus,
+    updatedAt: Date.now()
+  };
 
-    await db.receptionItems.put(updatedItem);
-    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
+  await db.receptionItems.put(updatedItem);
+  db.receptions.update(item.receptionId, { updatedAt: Date.now() }).catch(console.warn);
 
-    return updatedItem;
-  });
+  return updatedItem;
 }
 
 /**
  * Reverts the last partial count entry.
  */
 export async function undoLastPartialCount(itemId: string): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    const item = await db.receptionItems.get(itemId);
-    if (!item || !item.partialCounts || item.partialCounts.length === 0) return null;
+  const item = await db.receptionItems.get(itemId);
+  if (!item || !item.partialCounts || item.partialCounts.length === 0) return null;
 
-    const lastEntry = item.partialCounts[item.partialCounts.length - 1];
-    const newPartialCounts = item.partialCounts.slice(0, -1);
+  const lastEntry = item.partialCounts[item.partialCounts.length - 1];
+  const newPartialCounts = item.partialCounts.slice(0, -1);
 
-    let newReceived = item.receivedQuantity;
-    let newLoose = item.looseUnitsReceived || 0;
+  let newReceived = item.receivedQuantity;
+  let newLoose = item.looseUnitsReceived || 0;
 
-    if (lastEntry.isLooseUnit) {
-      newLoose = Math.max(0, newLoose - lastEntry.amount);
-    } else {
-      newReceived = Math.max(0, newReceived - lastEntry.amount);
+  if (lastEntry.isLooseUnit) {
+    newLoose = Math.max(0, newLoose - lastEntry.amount);
+  } else {
+    newReceived = Math.max(0, newReceived - lastEntry.amount);
+  }
+
+  let incident = item.incidentType;
+  if (item.conversionActive && item.conversionFactor > 1) {
+    const totalExp = item.expectedQuantity * item.conversionFactor;
+    const totalRec = (newReceived * item.conversionFactor) + newLoose;
+    if (totalRec <= totalExp && incident === 'sobrante') {
+      incident = 'ninguno';
     }
-
-    let incident = item.incidentType;
+  } else {
     if (newReceived <= item.expectedQuantity && incident === 'sobrante') {
       incident = 'ninguno';
     }
+  }
 
-    const newStatus = computeItemStatus(
-      newReceived,
-      item.expectedQuantity,
-      incident,
-      item.isExtra,
-      item.observations,
-      newLoose,
-      item.conversionActive,
-      item.conversionFactor,
-      false // reset manual completed on undo
-    );
+  const newStatus = computeItemStatus(
+    newReceived,
+    item.expectedQuantity,
+    incident,
+    item.isExtra,
+    item.observations,
+    newLoose,
+    item.conversionActive,
+    item.conversionFactor,
+    false // reset manual completed on undo
+  );
 
-    const updatedItem: ReceptionItem = {
-      ...item,
-      receivedQuantity: newReceived,
-      looseUnitsReceived: newLoose,
-      manualCompleted: false,
-      partialCounts: newPartialCounts,
-      incidentType: incident,
-      status: newStatus,
-      updatedAt: Date.now()
-    };
+  const updatedItem: ReceptionItem = {
+    ...item,
+    receivedQuantity: newReceived,
+    looseUnitsReceived: newLoose,
+    manualCompleted: false,
+    partialCounts: newPartialCounts,
+    incidentType: incident,
+    status: newStatus,
+    updatedAt: Date.now()
+  };
 
-    await db.receptionItems.put(updatedItem);
-    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
+  await db.receptionItems.put(updatedItem);
+  db.receptions.update(item.receptionId, { updatedAt: Date.now() }).catch(console.warn);
 
-    return updatedItem;
-  });
+  return updatedItem;
 }
 
 /**
@@ -324,35 +347,33 @@ export async function updateItemIncident(
   incidentType: IncidentType,
   observations: string
 ): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    const item = await db.receptionItems.get(itemId);
-    if (!item) return null;
+  const item = await db.receptionItems.get(itemId);
+  if (!item) return null;
 
-    const newStatus = computeItemStatus(
-      item.receivedQuantity,
-      item.expectedQuantity,
-      incidentType,
-      item.isExtra,
-      observations,
-      item.looseUnitsReceived || 0,
-      item.conversionActive,
-      item.conversionFactor,
-      item.manualCompleted || false
-    );
+  const newStatus = computeItemStatus(
+    item.receivedQuantity,
+    item.expectedQuantity,
+    incidentType,
+    item.isExtra,
+    observations,
+    item.looseUnitsReceived || 0,
+    item.conversionActive,
+    item.conversionFactor,
+    item.manualCompleted || false
+  );
 
-    const updatedItem: ReceptionItem = {
-      ...item,
-      incidentType,
-      observations: observations.trim(),
-      status: newStatus,
-      updatedAt: Date.now()
-    };
+  const updatedItem: ReceptionItem = {
+    ...item,
+    incidentType,
+    observations: observations.trim(),
+    status: newStatus,
+    updatedAt: Date.now()
+  };
 
-    await db.receptionItems.put(updatedItem);
-    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
+  await db.receptionItems.put(updatedItem);
+  db.receptions.update(item.receptionId, { updatedAt: Date.now() }).catch(console.warn);
 
-    return updatedItem;
-  });
+  return updatedItem;
 }
 
 /**
@@ -364,35 +385,33 @@ export async function updateItemConversion(
   conversionFactor: number,
   conversionTargetUnit?: string
 ): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    const item = await db.receptionItems.get(itemId);
-    if (!item) return null;
+  const item = await db.receptionItems.get(itemId);
+  if (!item) return null;
 
-    const newStatus = computeItemStatus(
-      item.receivedQuantity,
-      item.expectedQuantity,
-      item.incidentType,
-      item.isExtra,
-      item.observations,
-      item.looseUnitsReceived || 0,
-      conversionActive,
-      Math.max(1, conversionFactor),
-      item.manualCompleted || false
-    );
+  const newStatus = computeItemStatus(
+    item.receivedQuantity,
+    item.expectedQuantity,
+    item.incidentType,
+    item.isExtra,
+    item.observations,
+    item.looseUnitsReceived || 0,
+    conversionActive,
+    Math.max(1, conversionFactor),
+    item.manualCompleted || false
+  );
 
-    const updatedItem: ReceptionItem = {
-      ...item,
-      conversionActive,
-      conversionFactor: Math.max(1, conversionFactor),
-      conversionTargetUnit: conversionTargetUnit || item.conversionTargetUnit,
-      status: newStatus,
-      updatedAt: Date.now()
-    };
+  const updatedItem: ReceptionItem = {
+    ...item,
+    conversionActive,
+    conversionFactor: Math.max(1, conversionFactor),
+    conversionTargetUnit: conversionTargetUnit || item.conversionTargetUnit,
+    status: newStatus,
+    updatedAt: Date.now()
+  };
 
-    await db.receptionItems.put(updatedItem);
-    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
-    return updatedItem;
-  });
+  await db.receptionItems.put(updatedItem);
+  db.receptions.update(item.receptionId, { updatedAt: Date.now() }).catch(console.warn);
+  return updatedItem;
 }
 
 /**
@@ -410,7 +429,7 @@ export async function addExtraItem(
     observations?: string;
   }
 ): Promise<ReceptionItem> {
-  const lineId = 'EXTRA-' + Date.now().toString().slice(-6);
+  const lineId = 'EXTRA-' + Date.now().toString().slice(-6) + '-' + Math.random().toString(36).substring(2, 6);
   const id = `${receptionId}_${lineId}`;
 
   const extraItem: ReceptionItem = {
@@ -447,16 +466,14 @@ export async function addExtraItem(
     updatedAt: Date.now()
   };
 
-  await db.transaction('rw', db.receptionItems, db.receptions, async () => {
-    await db.receptionItems.put(extraItem);
-    const rec = await db.receptions.get(receptionId);
-    if (rec) {
-      await db.receptions.update(receptionId, {
-        totalLines: rec.totalLines + 1,
-        updatedAt: Date.now()
-      });
-    }
-  });
+  await db.receptionItems.put(extraItem);
+  const rec = await db.receptions.get(receptionId);
+  if (rec) {
+    await db.receptions.update(receptionId, {
+      totalLines: rec.totalLines + 1,
+      updatedAt: Date.now()
+    });
+  }
 
   return extraItem;
 }
@@ -469,33 +486,43 @@ export async function closeReception(
   notes?: string,
   autoMarkMissing: boolean = true
 ): Promise<void> {
-  await db.transaction('rw', db.receptions, db.receptionItems, async () => {
-    const items = await db.receptionItems.where('receptionId').equals(receptionId).toArray();
-    const now = Date.now();
+  const items = await db.receptionItems.where('receptionId').equals(receptionId).toArray();
+  const now = Date.now();
 
-    if (autoMarkMissing) {
-      for (const item of items) {
-        if (!item.isExtra && item.status !== 'completo') {
-          const diff = item.expectedQuantity - item.receivedQuantity;
-          const currentObs = item.observations ? item.observations + ' | ' : '';
-          const newObs = `${currentObs}Faltante detectado al cierre (${diff} ${diff === 1 ? item.unitName : item.unitNamePlural})`;
+  if (autoMarkMissing) {
+    const updates: ReceptionItem[] = [];
+    for (const item of items) {
+      if (!item.isExtra && item.status !== 'completo') {
+        const diff = item.expectedQuantity - item.receivedQuantity;
+        // Do not overwrite explicit incidents (e.g. 'danado', 'cambiado')
+        const canSetFaltante = item.incidentType === 'ninguno' || item.incidentType === 'faltante';
+        const newIncident = canSetFaltante && diff > 0 ? 'faltante' : item.incidentType;
 
-          await db.receptionItems.update(item.id, {
-            incidentType: 'faltante',
-            status: 'observado',
-            observations: newObs,
-            updatedAt: now
-          });
+        let newObs = item.observations || '';
+        if (diff > 0 && !newObs.includes('Faltante detectado al cierre')) {
+          const prefix = newObs ? newObs + ' | ' : '';
+          newObs = `${prefix}Faltante detectado al cierre (${diff} ${diff === 1 ? item.unitName : item.unitNamePlural})`;
         }
+
+        updates.push({
+          ...item,
+          incidentType: newIncident,
+          status: 'observado',
+          observations: newObs,
+          updatedAt: now
+        });
       }
     }
+    if (updates.length > 0) {
+      await db.receptionItems.bulkPut(updates);
+    }
+  }
 
-    await db.receptions.update(receptionId, {
-      status: 'cerrada',
-      closedAt: now,
-      closedNotes: notes?.trim() || undefined,
-      updatedAt: now
-    });
+  await db.receptions.update(receptionId, {
+    status: 'cerrada',
+    closedAt: now,
+    closedNotes: notes?.trim() || undefined,
+    updatedAt: now
   });
 }
 
@@ -510,10 +537,10 @@ export async function reopenReception(receptionId: string): Promise<void> {
 }
 
 /**
- * Deletes a reception and all its associated items.
+ * Deletes a reception and all its associated items atomically.
  */
 export async function deleteReception(receptionId: string): Promise<void> {
-  await db.transaction('rw', db.receptions, db.receptionItems, async () => {
+  await db.transaction('rw', [db.receptions, db.receptionItems], async () => {
     await db.receptionItems.where('receptionId').equals(receptionId).delete();
     await db.receptions.delete(receptionId);
   });

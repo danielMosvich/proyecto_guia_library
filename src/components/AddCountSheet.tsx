@@ -23,28 +23,29 @@ export const AddCountSheet: React.FC<AddCountSheetProps> = ({
   onClose,
   onConfirm,
 }) => {
-  if (!isOpen || !item) return null;
-
-  // Determine if XML unit is a container/package
-  const isPackageUnit = item.unitName !== 'Unidad' && item.rawUnitCode !== 'NIU' && item.rawUnitCode !== 'ZZ';
+  const isPackageUnit = item
+    ? item.unitName !== 'Unidad' && item.rawUnitCode !== 'NIU' && item.rawUnitCode !== 'ZZ'
+    : false;
 
   const [inputVal, setInputVal] = useState<string>('1');
-  const [countLooseUnits, setCountLooseUnits] = useState<boolean>(item.conversionActive);
-  const [manualFactorInput, setManualFactorInput] = useState<string>(
-    item.conversionActive && item.conversionFactor > 1 ? String(item.conversionFactor) : ''
-  );
+  const [countLooseUnits, setCountLooseUnits] = useState<boolean>(false);
+  const [manualFactorInput, setManualFactorInput] = useState<string>('');
   const [boxTag, setBoxTag] = useState<string>('');
 
-  const remainingXMLUnits = Math.max(0, item.expectedQuantity - item.receivedQuantity);
-
   useEffect(() => {
-    setInputVal('1');
-    setBoxTag('');
-    setCountLooseUnits(item?.conversionActive || false);
-    setManualFactorInput(
-      item?.conversionActive && item.conversionFactor > 1 ? String(item.conversionFactor) : ''
-    );
-  }, [item?.id, item?.conversionActive, item?.conversionFactor]);
+    if (item && isOpen) {
+      setInputVal('1');
+      setBoxTag('');
+      setCountLooseUnits(item.conversionActive || false);
+      setManualFactorInput(
+        item.conversionActive && item.conversionFactor > 1 ? String(item.conversionFactor) : ''
+      );
+    }
+  }, [item?.id, item?.conversionActive, item?.conversionFactor, isOpen]);
+
+  if (!isOpen || !item) return null;
+
+  const remainingXMLUnits = Math.max(0, item.expectedQuantity - item.receivedQuantity);
 
   const parsedQty = parseFloat(inputVal) || 0;
   const parsedFactor = parseInt(manualFactorInput, 10);
@@ -92,7 +93,10 @@ export const AddCountSheet: React.FC<AddCountSheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
         onClick={(e) => e.stopPropagation()}

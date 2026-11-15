@@ -15,17 +15,19 @@ export const ConversionModal: React.FC<ConversionModalProps> = ({
   onClose,
   onSave,
 }) => {
-  if (!isOpen || !item) return null;
-
-  const [active, setActive] = useState<boolean>(item.conversionActive);
-  const [factor, setFactor] = useState<number>(item.conversionFactor || 1);
-  const [targetUnit, setTargetUnit] = useState<string>(item.conversionTargetUnit || 'Unidad');
+  const [active, setActive] = useState<boolean>(item?.conversionActive || false);
+  const [factor, setFactor] = useState<number>(item?.conversionFactor || 1);
+  const [targetUnit, setTargetUnit] = useState<string>(item?.conversionTargetUnit || 'Unidad');
 
   useEffect(() => {
-    setActive(item.conversionActive);
-    setFactor(item.conversionFactor > 1 ? item.conversionFactor : item.suggestedConversion || 12);
-    setTargetUnit(item.conversionTargetUnit || 'Unidad');
-  }, [item?.id, item?.conversionActive, item?.conversionFactor, item?.conversionTargetUnit, item?.suggestedConversion]);
+    if (item && isOpen) {
+      setActive(item.conversionActive);
+      setFactor(item.conversionFactor > 1 ? item.conversionFactor : item.suggestedConversion || 12);
+      setTargetUnit(item.conversionTargetUnit || 'Unidad');
+    }
+  }, [item?.id, item?.conversionActive, item?.conversionFactor, item?.conversionTargetUnit, item?.suggestedConversion, isOpen]);
+
+  if (!isOpen || !item) return null;
 
   const handleSave = () => {
     onSave(active, Math.max(1, factor), targetUnit.trim() || 'Unidad');
@@ -33,7 +35,10 @@ export const ConversionModal: React.FC<ConversionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}

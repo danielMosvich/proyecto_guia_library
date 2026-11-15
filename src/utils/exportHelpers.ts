@@ -12,7 +12,7 @@ export function generateWhatsAppSummary(reception: Reception, items: ReceptionIt
     : new Date().toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
   const standardItems = items.filter(i => !i.isExtra);
-  const completeItems = standardItems.filter(i => i.receivedQuantity === i.expectedQuantity && i.incidentType === 'ninguno');
+  const completeItems = standardItems.filter(i => i.status === 'completo' && i.incidentType === 'ninguno');
   const conformityPercent = standardItems.length > 0 
     ? Math.round((completeItems.length / standardItems.length) * 100) 
     : 100;
@@ -152,7 +152,7 @@ export function exportReceptionToCSV(reception: Reception, items: ReceptionItem[
  */
 export function exportReceptionToPOSPayload(reception: Reception, items: ReceptionItem[]): RecepcionPOSPayload {
   const standardItems = items.filter(i => !i.isExtra);
-  const completeItems = standardItems.filter(i => i.receivedQuantity === i.expectedQuantity && i.incidentType === 'ninguno');
+  const completeItems = standardItems.filter(i => i.status === 'completo' && i.incidentType === 'ninguno');
   const conformityPercent = standardItems.length > 0
     ? Math.round((completeItems.length / standardItems.length) * 100)
     : 100;
@@ -172,7 +172,7 @@ export function exportReceptionToPOSPayload(reception: Reception, items: Recepti
       fechaCierre: reception.closedAt ? new Date(reception.closedAt).toISOString() : new Date().toISOString(),
       totalLineas: items.length,
       itemsRecibidosConformes: completeItems.length,
-      itemsConDiscrepancia: items.length - completeItems.length,
+      itemsConDiscrepancia: standardItems.length - completeItems.length,
       porcentajeConformidad: conformityPercent,
       observacionesCierre: reception.closedNotes
     },

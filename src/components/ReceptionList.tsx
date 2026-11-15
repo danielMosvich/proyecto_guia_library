@@ -12,7 +12,7 @@ import {
 import type { Reception } from '../types';
 import { SAMPLE_DESPATCH_ADVICE_XML, SAMPLE_INVOICE_XML } from '../data/sampleXml';
 import { parseSunatXml } from '../utils/sunatXmlParser';
-import { saveReceptionWithItems, db } from '../db';
+import { saveReceptionWithItems, deleteReception, db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 interface ReceptionListProps {
@@ -41,10 +41,15 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
   const processXmlString = async (xmlContent: string, fileName?: string) => {
     try {
       const parsed = parseSunatXml(xmlContent);
-      await saveReceptionWithItems(parsed.reception, parsed.items);
+      // Fail-safe timeout protection so UI NEVER hangs permanently
+      const savePromise = saveReceptionWithItems(parsed.reception, parsed.items);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tiempo de espera agotado al guardar en base de datos local.')), 12000)
+      );
+      await Promise.race([savePromise, timeoutPromise]);
       onSelectReception(parsed.reception.id);
     } catch (err: any) {
-      console.error(err);
+      console.error('Error al procesar XML:', err);
       setErrorMessage(
         `Error al procesar ${fileName || 'el archivo'}: ${err.message || 'Formato XML inválido'}`
       );
@@ -93,10 +98,12 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
   const handleDelete = async (receptionId: string, serieNumero: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm(`¿Estás seguro de eliminar la recepción ${serieNumero}? Se borrarán todos los conteos.`)) {
-      await db.transaction('rw', db.receptions, db.receptionItems, async () => {
-        await db.receptionItems.where('receptionId').equals(receptionId).delete();
-        await db.receptions.delete(receptionId);
-      });
+      try {
+        await deleteReception(receptionId);
+      } catch (err: any) {
+        console.error('Error al eliminar recepción:', err);
+        setErrorMessage(`No se pudo eliminar la recepción: ${err.message || 'Error en IndexedDB'}`);
+      }
     }
   };
 
@@ -185,7 +192,16 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
           )}
         </div>
 
-        {(!receptions || receptions.length === 0) ? (
+        {receptions === undefined ? (
+          <div className="bg-white border border-[#E5E5EA] rounded-2xl p-8 text-center space-y-3 shadow-xs animate-pulse">
+            <div className="w-12 h-12 rounded-full bg-[#E5E5EA] mx-auto" />
+            <div>
+              <div className="h-4 bg-[#E5E5EA] rounded-md w-40 mx-auto" />
+              <div className="h-3 bg-[#F2F2F7] rounded-md w-56 mx-auto mt-2" />
+            </div>
+            <p className="text-xs text-[#8E8E93] font-medium">Cargando recepciones locales...</p>
+          </div>
+        ) : receptions.length === 0 ? (
           <div className="bg-white border border-[#E5E5EA] rounded-2xl p-8 text-center space-y-3 shadow-xs">
             <div className="w-12 h-12 rounded-full bg-[#F2F2F7] flex items-center justify-center mx-auto text-[#8E8E93]">
               <FileText className="w-6 h-6" />
@@ -211,7 +227,7 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
               // Calculate items progress for this reception
               const recItems = allItems?.filter(i => i.receptionId === rec.id) || [];
               const standardItems = recItems.filter(i => !i.isExtra);
-              const completeItems = standardItems.filter(i => i.receivedQuantity === i.expectedQuantity && i.incidentType === 'ninguno');
+              const completeItems = standardItems.filter(i => i.status === 'completo' && i.incidentType === 'ninguno');
               const percent = standardItems.length > 0
                 ? Math.round((completeItems.length / standardItems.length) * 100)
                 : 100;

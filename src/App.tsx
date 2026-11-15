@@ -8,8 +8,28 @@ import { ReceptionDetailView } from './components/ReceptionDetailView';
 import { SummaryModal } from './components/SummaryModal';
 
 export const App: React.FC = () => {
-  const [selectedReceptionId, setSelectedReceptionId] = useState<string | null>(null);
+  // Restore previously active reception if the PWA or browser was restarted
+  const [selectedReceptionId, setSelectedReceptionId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('sunat_active_reception_id');
+    } catch {
+      return null;
+    }
+  });
   const [summaryModalReception, setSummaryModalReception] = useState<Reception | null>(null);
+
+  const handleSelectReception = (id: string | null) => {
+    setSelectedReceptionId(id);
+    try {
+      if (id) {
+        localStorage.setItem('sunat_active_reception_id', id);
+      } else {
+        localStorage.removeItem('sunat_active_reception_id');
+      }
+    } catch {
+      // Safe fallback if storage quota exceeded
+    }
+  };
 
   // For summary opened from the list view
   const summaryItems = useLiveQuery(async (): Promise<ReceptionItem[]> => {
@@ -27,14 +47,14 @@ export const App: React.FC = () => {
             subtitle="Guías & Facturas · Offline 100%"
           />
           <ReceptionList
-            onSelectReception={(id) => setSelectedReceptionId(id)}
+            onSelectReception={handleSelectReception}
             onOpenSummary={(rec) => setSummaryModalReception(rec)}
           />
         </>
       ) : (
         <ReceptionDetailView
           receptionId={selectedReceptionId}
-          onBack={() => setSelectedReceptionId(null)}
+          onBack={() => handleSelectReception(null)}
         />
       )}
 
@@ -51,7 +71,7 @@ export const App: React.FC = () => {
               updatedAt: Date.now(),
             });
             setSummaryModalReception(null);
-            setSelectedReceptionId(summaryModalReception.id);
+            handleSelectReception(summaryModalReception.id);
           }}
         />
       )}

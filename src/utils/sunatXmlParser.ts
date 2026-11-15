@@ -328,8 +328,9 @@ export function parseSunatXml(xmlString: string, customDOMParser?: any): ParsedS
     const quantityEl = findElement(lineEl, qtyTag);
 
     const rawUnitCode = quantityEl?.getAttribute('unitCode') || 'NIU';
-    const rawQtyText = quantityEl?.textContent || '1';
-    const expectedQuantity = Math.max(0, parseFloat(rawQtyText) || 1);
+    const rawQtyText = quantityEl?.textContent?.trim() || '';
+    const parsedQty = parseFloat(rawQtyText);
+    const expectedQuantity = Math.max(0, isNaN(parsedQty) ? 1 : parsedQty);
 
     totalExpectedQuantity += expectedQuantity;
 

@@ -29,10 +29,9 @@ export const ActionHistorySheet: React.FC<ActionHistorySheetProps> = ({
   onClose,
   onUndoItem,
 }) => {
-  if (!isOpen) return null;
-
   // Flatten and sort all partial counts from all items by timestamp descending
   const historyEntries: ActionEntry[] = useMemo(() => {
+    if (!isOpen) return [];
     const list: ActionEntry[] = [];
 
     items.forEach((item) => {
@@ -57,7 +56,9 @@ export const ActionHistorySheet: React.FC<ActionHistorySheetProps> = ({
 
     // Sort newest first
     return list.sort((a, b) => b.timestamp - a.timestamp);
-  }, [items]);
+  }, [items, isOpen]);
+
+  if (!isOpen) return null;
 
   const formatTime = (ts: number) => {
     const d = new Date(ts);
@@ -74,7 +75,10 @@ export const ActionHistorySheet: React.FC<ActionHistorySheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] pb-safe"
         onClick={(e) => e.stopPropagation()}

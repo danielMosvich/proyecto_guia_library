@@ -17,13 +17,20 @@ export const CloseReceptionModal: React.FC<CloseReceptionModalProps> = ({
   onClose,
   onConfirmClose,
 }) => {
-  if (!isOpen) return null;
-
   const [notes, setNotes] = useState<string>('');
   const [autoMarkMissing, setAutoMarkMissing] = useState<boolean>(true);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setNotes('');
+      setAutoMarkMissing(true);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
   const standardItems = items.filter(i => !i.isExtra);
-  const completeItems = standardItems.filter(i => i.receivedQuantity === i.expectedQuantity && i.incidentType === 'ninguno');
+  const completeItems = standardItems.filter(i => i.status === 'completo' && i.incidentType === 'ninguno');
   const zeroItems = standardItems.filter(i => i.receivedQuantity === 0);
   const partialItems = standardItems.filter(i => i.receivedQuantity > 0 && i.receivedQuantity < i.expectedQuantity);
   const surplusItems = standardItems.filter(i => i.receivedQuantity > i.expectedQuantity);
@@ -33,7 +40,10 @@ export const CloseReceptionModal: React.FC<CloseReceptionModalProps> = ({
   const isIncomplete = zeroItems.length > 0 || partialItems.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
         onClick={(e) => e.stopPropagation()}

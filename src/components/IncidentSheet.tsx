@@ -59,15 +59,17 @@ export const IncidentSheet: React.FC<IncidentSheetProps> = ({
   onClose,
   onSave
 }) => {
-  if (!isOpen || !item) return null;
-
-  const [selectedType, setSelectedType] = useState<IncidentType>(item.incidentType);
-  const [notes, setNotes] = useState<string>(item.observations || '');
+  const [selectedType, setSelectedType] = useState<IncidentType>(item?.incidentType || 'ninguno');
+  const [notes, setNotes] = useState<string>(item?.observations || '');
 
   useEffect(() => {
-    setSelectedType(item.incidentType);
-    setNotes(item.observations || '');
-  }, [item?.id, item?.incidentType, item?.observations]);
+    if (item && isOpen) {
+      setSelectedType(item.incidentType);
+      setNotes(item.observations || '');
+    }
+  }, [item?.id, item?.incidentType, item?.observations, isOpen]);
+
+  if (!isOpen || !item) return null;
 
   const handleSave = () => {
     onSave(selectedType, notes);
@@ -75,7 +77,10 @@ export const IncidentSheet: React.FC<IncidentSheetProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
         onClick={(e) => e.stopPropagation()}

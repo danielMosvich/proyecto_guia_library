@@ -34,13 +34,19 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
   onClose,
   onReopen,
 }) => {
-  if (!isOpen) return null;
-
   const [copied, setCopied] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setCopied(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const standardItems = items.filter(i => !i.isExtra);
   const completeItems = standardItems.filter(
-    i => i.receivedQuantity === i.expectedQuantity && i.incidentType === 'ninguno'
+    i => i.status === 'completo' && i.incidentType === 'ninguno'
   );
   const conformityPercent = standardItems.length > 0
     ? Math.round((completeItems.length / standardItems.length) * 100)
@@ -81,7 +87,10 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] pb-safe"
         onClick={(e) => e.stopPropagation()}

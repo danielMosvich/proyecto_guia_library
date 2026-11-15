@@ -39,8 +39,6 @@ export const ExtraItemModal: React.FC<ExtraItemModalProps> = ({
   initialQuery = '',
   onConfirm,
 }) => {
-  if (!isOpen) return null;
-
   const [description, setDescription] = useState<string>('');
   const [itemCode, setItemCode] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('1');
@@ -49,23 +47,27 @@ export const ExtraItemModal: React.FC<ExtraItemModalProps> = ({
   const [observations, setObservations] = useState<string>('');
 
   useEffect(() => {
-    if (initialQuery.trim()) {
-      if (/^\d+$/.test(initialQuery.trim())) {
-        setItemCode(initialQuery.trim());
-        setDescription('');
+    if (isOpen) {
+      if (initialQuery.trim()) {
+        if (/^\d+$/.test(initialQuery.trim())) {
+          setItemCode(initialQuery.trim());
+          setDescription('');
+        } else {
+          setDescription(initialQuery.trim().toUpperCase());
+          setItemCode('');
+        }
       } else {
-        setDescription(initialQuery.trim().toUpperCase());
+        setDescription('');
         setItemCode('');
       }
-    } else {
-      setDescription('');
-      setItemCode('');
+      setQuantity('1');
+      setSelectedUnit(UNIT_CHOICES[0]);
+      setReason('bonificacion');
+      setObservations('');
     }
-    setQuantity('1');
-    setSelectedUnit(UNIT_CHOICES[0]);
-    setReason('bonificacion');
-    setObservations('');
   }, [initialQuery, isOpen]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -87,7 +89,10 @@ export const ExtraItemModal: React.FC<ExtraItemModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+    <div 
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div 
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
         onClick={(e) => e.stopPropagation()}
