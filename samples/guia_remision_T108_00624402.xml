@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DespatchAdvice xmlns="urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2"
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>2.0</cbc:CustomizationID>
+  <cbc:ID>T108-00624402</cbc:ID>
+  <cbc:IssueDate>2026-11-15</cbc:IssueDate>
+  <cbc:IssueTime>08:45:00</cbc:IssueTime>
+  <cbc:DespatchAdviceTypeCode>09</cbc:DespatchAdviceTypeCode>
+  <cbc:Note>ENTREGA MERCADERIA ALMACEN CENTRAL - ORDEN DE COMPRA OC-2026-889</cbc:Note>
+
+  <cac:DespatchSupplierParty>
+    <cac:Party>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="6">20512345678</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName><![CDATA[DISTRIBUIDORA NACIONAL DE UTILES Y SUMINISTROS S.A.C.]]></cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:DespatchSupplierParty>
+
+  <cac:DeliveryCustomerParty>
+    <cac:Party>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="6">20609876543</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName><![CDATA[COMERCIALIZADORA RETAIL LIMA S.R.L.]]></cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:DeliveryCustomerParty>
+
+  <cac:DespatchLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="BX">5</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[LIMPIATIPOS ARTESCO COLOR AZUL CAX24]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974001]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>2</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="PK">10</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[LIMPIAPIPAS CHENILLE ROJO 30CM PQTX100 ARTESCO]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974002]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>3</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="NIU">48</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[CUADERNO ENGRAMPADO TRIPLE RENGLON 100H STANDFORD]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974003]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>4</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="BX">4</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[PLUMON PARA PIZARRA ACRILICA COLOR NEGRO ARTESCO CAX12]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974004]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>5</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="NIU">36</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[TIJERA ESCOLAR PUNTA ROMA 5 PULGADAS FABER-CASTELL]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974005]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>6</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="BX">6</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[GOMA EN BARRA GLUE STICK 40GR PEGAFAN DISPX12]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974006]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>7</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="PK">8</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[PAPEL BOND A4 75GR REPORT MILLAR PQTX500 HOJAS]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974007]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+
+  <cac:DespatchLine>
+    <cbc:ID>8</cbc:ID>
+    <cbc:DeliveredQuantity unitCode="BO">24</cbc:DeliveredQuantity>
+    <cac:Item>
+      <cbc:Description><![CDATA[SILICONA LIQUIDA 250ML ARTESCO CON DOSIFICADOR]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[50974008]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:DespatchLine>
+</DespatchAdvice>

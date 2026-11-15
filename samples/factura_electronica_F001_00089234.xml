@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>2.0</cbc:CustomizationID>
+  <cbc:ID>F001-00089234</cbc:ID>
+  <cbc:IssueDate>2026-11-15</cbc:IssueDate>
+  <cbc:InvoiceTypeCode listID="0101">01</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>PEN</cbc:DocumentCurrencyCode>
+
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="6">20100123456</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName><![CDATA[IMPORTACIONES Y PAPELERIA INDUSTRIAL PERU S.A.]]></cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyIdentification>
+        <cbc:ID schemeID="6">20609876543</cbc:ID>
+      </cac:PartyIdentification>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName><![CDATA[COMERCIALIZADORA RETAIL LIMA S.R.L.]]></cbc:RegistrationName>
+      </cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="BX">12</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="PEN">720.00</cbc:LineExtensionAmount>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="PEN">60.00</cbc:PriceAmount>
+    </cac:Price>
+    <cac:Item>
+      <cbc:Description><![CDATA[CINTA DE EMBALAJE TRANSPARENTE 2X110 YARDAS PEGAFAN CAX36]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[7751234001]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>2</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="NIU">50</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="PEN">425.00</cbc:LineExtensionAmount>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="PEN">8.50</cbc:PriceAmount>
+    </cac:Price>
+    <cac:Item>
+      <cbc:Description><![CDATA[ARCHIVADOR DE PALANCA LOMO ANCHO OFICIO COLOR NEGRO FORTE]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[7751234002]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>3</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="BX">20</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="PEN">70.00</cbc:LineExtensionAmount>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="PEN">3.50</cbc:PriceAmount>
+    </cac:Price>
+    <cac:Item>
+      <cbc:Description><![CDATA[GRAPAS COBREADAS 26/6 CAX5000 RAPID]]></cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID><![CDATA[7751234003]]></cbc:ID>
+      </cac:SellersItemIdentification>
+    </cac:Item>
+  </cac:InvoiceLine>
+</Invoice>
