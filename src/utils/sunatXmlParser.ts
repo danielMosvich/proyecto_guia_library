@@ -139,59 +139,36 @@ function getSubElementText(parent: Element | Document, localName: string): strin
 }
 
 /**
- * Inspects description and AdditionalItemProperty to detect packing multipliers
- * e.g., CAX12, CAX24, PQTX10, BLX100, CJX6, X12, PACK X 24
+ * Detects conversion factor (Disabled: SUNAT XML does not specify internal packing factor).
+ * Always returns null to avoid misinterpreting product descriptions (e.g., 250 GR, 40 GR).
  */
-export function detectConversionFactor(description: string, itemElement?: Element): number | null {
-  // 1. Inspect AdditionalItemProperty elements if present
-  if (itemElement) {
-    const props = findElements(itemElement, 'AdditionalItemProperty');
-    for (const prop of props) {
-      const name = getSubElementText(prop, 'Name').toUpperCase();
-      const value = getSubElementText(prop, 'Value');
-      if (
-        name.includes('FACTOR') ||
-        name.includes('EMPAQUE') ||
-        name.includes('PRESENTACION') ||
-        name.includes('CANTIDAD') ||
-        name.includes('UNIDADES')
-      ) {
-        const num = parseInt(value, 10);
-        if (!isNaN(num) && num > 1) {
-          return num;
-        }
-      }
-    }
-  }
-
-  // 2. Inspect description patterns
-  const descUpper = description.toUpperCase();
-  const patterns = [
-    /(?:CAX|CJX|CAJA\s*X|CAJA\s*POR)\s*(\d+)/i,
-    /(?:PQTX|PAQX|PAQUETE\s*X|PACK\s*X)\s*(\d+)/i,
-    /(?:BLX|BOLSA\s*X)\s*(\d+)/i,
-    /(?:BOTX|BOTELLA\s*X)\s*(\d+)/i,
-    /(?:DISPX|DISP\s*X|DISPLAY\s*X)\s*(\d+)/i,
-    /(?:DOCX|DOCENA\s*X)\s*(\d+)/i,
-    /\bX\s*(\d+)\b/i,
-  ];
-
-  for (const regex of patterns) {
-    const match = descUpper.match(regex);
-    if (match && match[1]) {
-      const val = parseInt(match[1], 10);
-      if (val > 1 && val < 50000) {
-        return val;
-      }
-    }
-  }
-
+export function detectConversionFactor(_description?: string, _itemElement?: Element): number | null {
   return null;
 }
 
 export interface ParsedSunatDocument {
   reception: Reception;
   items: ReceptionItem[];
+}
+
+/**
+ * Natural numerical sort for warehouse items:
+ * Ensures Line 1, 2, 3... 9, 10, 11 instead of alphabetical 1, 10, 100, 2
+ */
+export function sortItemsNaturally(items: ReceptionItem[]): ReceptionItem[] {
+  return [...items].sort((a, b) => {
+    // Put extra items at the end
+    if (a.isExtra && !b.isExtra) return 1;
+    if (!a.isExtra && b.isExtra) return -1;
+
+    const numA = parseInt(a.lineId, 10);
+    const numB = parseInt(b.lineId, 10);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      if (numA !== numB) return numA - numB;
+    }
+
+    return a.lineId.localeCompare(b.lineId, undefined, { numeric: true, sensitivity: 'base' });
+  });
 }
 
 /**
@@ -375,9 +352,6 @@ export function parseSunatXml(xmlString: string, customDOMParser?: any): ParsedS
     // Translation of unitCode
     const unitTrans = translateUnitCode(rawUnitCode);
 
-    // Conversion factor detection (e.g. CAX12)
-    const suggestedFactor = detectConversionFactor(description, itemEl || undefined);
-
     const itemId = `${receptionId}_${rawLineId}`;
 
     items.push({
@@ -391,11 +365,13 @@ export function parseSunatXml(xmlString: string, customDOMParser?: any): ParsedS
       unitNamePlural: unitTrans.plural,
       expectedQuantity,
       receivedQuantity: 0,
+      looseUnitsReceived: 0,
       unitPrice,
       conversionActive: false,
-      conversionFactor: suggestedFactor || 1,
+      conversionFactor: 1,
       conversionTargetUnit: 'Unidad',
-      suggestedConversion: suggestedFactor,
+      suggestedConversion: null,
+      manualCompleted: false,
       status: 'pendiente',
       incidentType: 'ninguno',
       observations: '',

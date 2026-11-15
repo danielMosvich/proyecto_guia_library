@@ -11,12 +11,6 @@ export const App: React.FC = () => {
   const [selectedReceptionId, setSelectedReceptionId] = useState<string | null>(null);
   const [summaryModalReception, setSummaryModalReception] = useState<Reception | null>(null);
 
-  // Live query for active reception in navbar
-  const activeReception = useLiveQuery(async (): Promise<Reception | undefined> => {
-    if (!selectedReceptionId) return undefined;
-    return await db.receptions.get(selectedReceptionId);
-  }, [selectedReceptionId]);
-
   // For summary opened from the list view
   const summaryItems = useLiveQuery(async (): Promise<ReceptionItem[]> => {
     if (!summaryModalReception) return [];
@@ -24,28 +18,19 @@ export const App: React.FC = () => {
   }, [summaryModalReception?.id]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col select-none">
-      {/* Top Main Navigation */}
-      <Navbar
-        onBack={selectedReceptionId ? () => setSelectedReceptionId(null) : undefined}
-        title={
-          activeReception
-            ? `${activeReception.documentType === 'DespatchAdvice' ? 'Guía' : 'Factura'} ${activeReception.serieNumero}`
-            : 'Recepción Almacén SUNAT'
-        }
-        subtitle={
-          activeReception
-            ? activeReception.proveedorNombre
-            : 'Control y Verificación Física · PWA Offline'
-        }
-      />
-
-      {/* Screen Views */}
+    <div className="min-h-screen bg-[#F2F2F7] text-[#1C1C1E] flex flex-col select-none">
+      {/* Top Navbar ONLY displayed on List screen (unified single header on detail screen) */}
       {!selectedReceptionId ? (
-        <ReceptionList
-          onSelectReception={(id) => setSelectedReceptionId(id)}
-          onOpenSummary={(rec) => setSummaryModalReception(rec)}
-        />
+        <>
+          <Navbar
+            title="Recepción Almacén SUNAT"
+            subtitle="Guías & Facturas · Offline 100%"
+          />
+          <ReceptionList
+            onSelectReception={(id) => setSelectedReceptionId(id)}
+            onOpenSummary={(rec) => setSummaryModalReception(rec)}
+          />
+        </>
       ) : (
         <ReceptionDetailView
           receptionId={selectedReceptionId}

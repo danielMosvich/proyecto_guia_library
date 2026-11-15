@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   X,
   Share2,
   Lock,
-  ArrowLeft,
+  ChevronLeft,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import type { Reception, FilterTabsCount } from '../types';
 
-export type FilterTab = 'todos' | 'pendientes' | 'parciales' | 'observados' | 'completos';
+export type FilterTab = 'pendientes' | 'parciales' | 'observados' | 'completos';
 
 interface ReceptionHeaderStickyProps {
   reception: Reception;
@@ -17,8 +19,6 @@ interface ReceptionHeaderStickyProps {
   activeTab: FilterTab;
   onTabChange: (tab: FilterTab) => void;
   tabsCount: FilterTabsCount;
-  autoClearSearch: boolean;
-  onToggleAutoClear: () => void;
   onOpenCloseModal: () => void;
   onOpenSummaryModal: () => void;
   onBack: () => void;
@@ -31,150 +31,155 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
   activeTab,
   onTabChange,
   tabsCount,
-  autoClearSearch,
-  onToggleAutoClear,
   onOpenCloseModal,
   onOpenSummaryModal,
   onBack,
 }) => {
-  const percentComplete = tabsCount.todos > 0
-    ? Math.round((tabsCount.completos / tabsCount.todos) * 100)
+  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const totalLines = tabsCount.todos;
+  const percentComplete = totalLines > 0
+    ? Math.round((tabsCount.completos / totalLines) * 100)
     : 0;
 
   return (
-    <div className="sticky top-0 z-30 bg-slate-900 text-white shadow-md border-b border-slate-800">
+    <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md text-[#1C1C1E] shadow-xs border-b border-[#E5E5EA]">
       {/* 1. Global Thin Progress Bar (Topmost) */}
-      <div className="w-full h-1.5 bg-slate-800 relative">
+      <div className="w-full h-1 bg-[#E5E5EA] relative overflow-hidden">
         <div
           className={`h-full transition-all duration-300 ${
-            percentComplete === 100 ? 'bg-emerald-400' : 'bg-blue-500'
+            percentComplete === 100 ? 'bg-[#34C759]' : 'bg-[#007AFF]'
           }`}
           style={{ width: `${percentComplete}%` }}
         />
       </div>
 
-      <div className="max-w-2xl mx-auto px-3 pt-2 pb-2.5 space-y-2">
-        {/* Document Info & Main Action Buttons */}
-        <div className="flex items-center justify-between gap-2">
+      <div className="max-w-2xl mx-auto px-3 pt-2 pb-2 space-y-2">
+        {/* Unified Compact Navigation Bar: Back, Title, Provider, Progress, Online/Offline, Share, Close */}
+        <div className="flex items-center justify-between gap-1.5">
+          {/* Back button & Document Title */}
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <button
               type="button"
               onClick={onBack}
-              title="Volver a lista de recepciones"
-              className="p-1 -ml-1 text-slate-300 hover:text-white active:bg-slate-800 rounded-lg transition-colors shrink-0"
+              aria-label="Volver a recepciones"
+              className="p-1 -ml-1 text-[#007AFF] hover:bg-slate-100 active:bg-slate-200 rounded-xl transition-colors shrink-0"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs text-white">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-xs text-[#1C1C1E] truncate max-w-[130px] xs:max-w-[170px]">
                   {reception.documentType === 'DespatchAdvice' ? 'Guía' : 'Factura'} {reception.serieNumero}
                 </span>
-                <span className="text-[11px] text-slate-400">·</span>
-                <span className="text-[11px] text-emerald-400 font-bold">
-                  {tabsCount.completos}/{tabsCount.todos} ({percentComplete}%)
+                <span className="text-[11px] text-[#34C759] font-bold shrink-0">
+                  {tabsCount.completos}/{totalLines} · {percentComplete}%
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate">
+              <p className="text-[10px] text-[#8E8E93] truncate leading-tight">
                 {reception.proveedorNombre}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Right Actions: Online/Offline, Share, Close */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Offline/Online compact badge */}
+            <div
+              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                isOnline
+                  ? 'bg-[#EBF9EE] text-[#34C759] border-[#D1F2D9]'
+                  : 'bg-[#FFF4E5] text-[#FF9500] border-[#FFE2BF] animate-pulse'
+              }`}
+              title={isOnline ? 'Online' : 'Offline'}
+            >
+              {isOnline ? <Wifi className="w-2.5 h-2.5" /> : <WifiOff className="w-2.5 h-2.5" />}
+              <span className="hidden xs:inline">{isOnline ? 'Online' : 'Off'}</span>
+            </div>
+
+            {/* Share / Summary Button */}
+            <button
+              type="button"
+              onClick={onOpenSummaryModal}
+              title="Resumen WhatsApp / Excel"
+              className="p-1.5 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#007AFF] rounded-xl text-xs font-semibold flex items-center border border-[#E5E5EA] transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Close Button */}
             {reception.status !== 'cerrada' ? (
               <button
                 type="button"
                 onClick={onOpenCloseModal}
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1 transition-transform active:scale-95"
+                className="px-2.5 py-1.5 bg-[#34C759] hover:bg-[#2EB84F] active:scale-95 text-white rounded-xl text-[11px] font-bold shadow-xs flex items-center gap-1 transition-transform"
               >
-                <Lock className="w-3.5 h-3.5" />
+                <Lock className="w-3 h-3" />
                 <span>Cerrar</span>
               </button>
             ) : (
-              <span className="px-2 py-1 bg-emerald-950/80 text-emerald-300 border border-emerald-700/80 rounded-md text-[11px] font-bold flex items-center gap-1">
-                <Lock className="w-3 h-3" />
+              <span className="px-2 py-1 bg-[#EBF9EE] text-[#34C759] border border-[#D1F2D9] rounded-xl text-[10px] font-bold flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
                 <span>Cerrada</span>
               </span>
             )}
-
-            <button
-              type="button"
-              onClick={onOpenSummaryModal}
-              title="Ver Resumen y Reportes para WhatsApp / Excel"
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 border border-slate-700 transition-colors"
-            >
-              <Share2 className="w-4 h-4 text-blue-400" />
-            </button>
           </div>
         </div>
 
-        {/* Search Bar with Large X Clear Button */}
-        <div className="relative flex items-center">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar por código, descripción (ej: chenille rojo)..."
-            className="w-full text-xs bg-slate-800 text-white placeholder-slate-400 pl-9 pr-9 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          />
+        {/* Search Bar with SEPARATED Large Clear Button */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-[#8E8E93] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Buscar código o descripción..."
+              className="w-full text-xs bg-[#F2F2F7] text-[#1C1C1E] placeholder-[#8E8E93] pl-8 pr-2.5 py-2 rounded-xl border border-transparent focus:bg-white focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all outline-none"
+            />
+          </div>
+
           {searchQuery && (
             <button
               type="button"
               onClick={() => onSearchChange('')}
-              className="absolute right-2 p-1.5 text-slate-400 hover:text-white active:bg-slate-700 rounded-full transition-colors"
+              className="h-[34px] px-2.5 bg-[#E5E5EA] hover:bg-[#D1D1D6] active:bg-[#C7C7CC] text-[#1C1C1E] font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-all active:scale-95 shrink-0 shadow-2xs"
               aria-label="Limpiar búsqueda"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 text-[#8E8E93]" />
+              <span>Limpiar</span>
             </button>
           )}
         </div>
 
-        {/* Secondary options row: Auto-clear checkbox */}
-        <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={autoClearSearch}
-              onChange={onToggleAutoClear}
-              className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-0 w-3.5 h-3.5"
-            />
-            <span>Auto-limpiar búsqueda al completar ítem</span>
-          </label>
-          {searchQuery && (
-            <span className="text-blue-300 font-medium">Filtrando lista</span>
-          )}
-        </div>
-
-        {/* Pill Filter Tabs with Badges */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
-          <button
-            type="button"
-            onClick={() => onTabChange('todos')}
-            className={`px-2.5 py-1 rounded-full font-semibold shrink-0 transition-all flex items-center gap-1.5 min-h-[32px] ${
-              activeTab === 'todos'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            <span>Todos</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-mono">
-              {tabsCount.todos}
-            </span>
-          </button>
-
+        {/* Fixed 4-Column Grid Tabs without horizontal scroll: Pend. (N), Parcial (N), Obs. (N), Listos (N) */}
+        <div className="grid grid-cols-4 gap-1 w-full pt-0.5">
           <button
             type="button"
             onClick={() => onTabChange('pendientes')}
-            className={`px-2.5 py-1 rounded-full font-semibold shrink-0 transition-all flex items-center gap-1.5 min-h-[32px] ${
+            className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
               activeTab === 'pendientes'
-                ? 'bg-slate-200 text-slate-900 shadow-xs'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                ? 'bg-[#8E8E93] text-white shadow-xs'
+                : 'bg-[#E5E5EA] text-[#3A3A3C] hover:bg-[#D1D1D6]'
             }`}
           >
-            <span>Pendientes</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-600 text-white font-mono">
+            <span>Pend.</span>
+            <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
+              activeTab === 'pendientes' ? 'bg-white/25 text-white' : 'bg-white text-[#3A3A3C]'
+            }`}>
               {tabsCount.pendientes}
             </span>
           </button>
@@ -182,14 +187,16 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
           <button
             type="button"
             onClick={() => onTabChange('parciales')}
-            className={`px-2.5 py-1 rounded-full font-semibold shrink-0 transition-all flex items-center gap-1.5 min-h-[32px] ${
+            className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
               activeTab === 'parciales'
-                ? 'bg-amber-500 text-slate-900 shadow-xs font-bold'
-                : 'bg-slate-800 text-amber-300 hover:bg-slate-700'
+                ? 'bg-[#FF9500] text-white shadow-xs'
+                : 'bg-[#FFF4E5] text-[#FF9500] hover:bg-[#FFE8CC]'
             }`}
           >
-            <span>En Proceso</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400/30 text-amber-200 font-mono">
+            <span>Parcial</span>
+            <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
+              activeTab === 'parciales' ? 'bg-white/25 text-white' : 'bg-white text-[#FF9500]'
+            }`}>
               {tabsCount.parciales}
             </span>
           </button>
@@ -197,14 +204,16 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
           <button
             type="button"
             onClick={() => onTabChange('observados')}
-            className={`px-2.5 py-1 rounded-full font-semibold shrink-0 transition-all flex items-center gap-1.5 min-h-[32px] ${
+            className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
               activeTab === 'observados'
-                ? 'bg-rose-600 text-white shadow-xs font-bold'
-                : 'bg-slate-800 text-rose-300 hover:bg-slate-700'
+                ? 'bg-[#FF3B30] text-white shadow-xs'
+                : 'bg-[#FFEBEA] text-[#FF3B30] hover:bg-[#FFD7D5]'
             }`}
           >
-            <span>Observados / Extras</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/30 text-rose-200 font-mono">
+            <span>Obs.</span>
+            <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
+              activeTab === 'observados' ? 'bg-white/25 text-white' : 'bg-white text-[#FF3B30]'
+            }`}>
               {tabsCount.observados}
             </span>
           </button>
@@ -212,14 +221,16 @@ export const ReceptionHeaderSticky: React.FC<ReceptionHeaderStickyProps> = ({
           <button
             type="button"
             onClick={() => onTabChange('completos')}
-            className={`px-2.5 py-1 rounded-full font-semibold shrink-0 transition-all flex items-center gap-1.5 min-h-[32px] ${
+            className={`py-1.5 px-0.5 rounded-xl font-bold text-center transition-all flex items-center justify-center gap-1 min-h-[32px] text-[11px] leading-none ${
               activeTab === 'completos'
-                ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                : 'bg-slate-800 text-emerald-300 hover:bg-slate-700'
+                ? 'bg-[#34C759] text-white shadow-xs'
+                : 'bg-[#EBF9EE] text-[#34C759] hover:bg-[#D5F5DA]'
             }`}
           >
-            <span>Completos</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/30 text-emerald-200 font-mono">
+            <span>Listos</span>
+            <span className={`text-[10px] px-1 py-0.2 rounded-full font-mono ${
+              activeTab === 'completos' ? 'bg-white/25 text-white' : 'bg-white text-[#34C759]'
+            }`}>
               {tabsCount.completos}
             </span>
           </button>

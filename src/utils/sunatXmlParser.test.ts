@@ -1,12 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { parseSunatXml, translateUnitCode, detectConversionFactor } from './sunatXmlParser';
+import { parseSunatXml, translateUnitCode, detectConversionFactor, sortItemsNaturally } from './sunatXmlParser';
 import { SAMPLE_DESPATCH_ADVICE_XML, SAMPLE_INVOICE_XML } from '../data/sampleXml';
 import { generateWhatsAppSummary, exportReceptionToPOSPayload } from './exportHelpers';
+import type { ReceptionItem } from '../types';
 
 const dom = new JSDOM();
 
 describe('SUNAT XML Parser and Warehouse Rules', () => {
+  it('Sorts items naturally by Line ID (1, 2, 3... 10, 100) instead of alphabetical (1, 10, 100, 2)', () => {
+    const mockItems = [
+      { id: '100', lineId: '100', isExtra: false },
+      { id: '1', lineId: '1', isExtra: false },
+      { id: '10', lineId: '10', isExtra: false },
+      { id: '2', lineId: '2', isExtra: false },
+      { id: 'extra', lineId: 'EXTRA-999', isExtra: true },
+    ] as ReceptionItem[];
+
+    const sorted = sortItemsNaturally(mockItems);
+    expect(sorted.map(i => i.lineId)).toEqual(['1', '2', '10', '100', 'EXTRA-999']);
+  });
   it('Translates UN/ECE Rec 20 codes to Spanish (never raw codes)', () => {
     expect(translateUnitCode('NIU').singular).toBe('Unidad');
     expect(translateUnitCode('NIU').plural).toBe('Unidades');
@@ -23,15 +36,12 @@ describe('SUNAT XML Parser and Warehouse Rules', () => {
     expect(translateUnitCode('XYZ_UNKNOWN').singular).toBe('Unidad');
   });
 
-  it('Detects packaging conversion patterns like CAX24, PQTX100', () => {
-    expect(detectConversionFactor('LIMPIATIPOS ARTESCO COLOR AZUL CAX24')).toBe(24);
-    expect(detectConversionFactor('LIMPIAPIPAS CHENILLE ROJO 30CM PQTX100 ARTESCO')).toBe(100);
-    expect(detectConversionFactor('PLUMON PARA PIZARRA CAX12')).toBe(12);
-    expect(detectConversionFactor('GOMA EN BARRA GLUE STICK DISPX12')).toBe(12);
-    expect(detectConversionFactor('CUADERNO ENGRAMPADO STANDFORD 100H')).toBe(null);
+  it('Disabled automatic factor detection to prevent misinterpreting descriptions (e.g. 250 GR)', () => {
+    expect(detectConversionFactor('LIMPIATIPOS ARTESCO COLOR AZUL CAX24')).toBe(null);
+    expect(detectConversionFactor('SILICONA LIQUIDA 250ML')).toBe(null);
   });
 
-  it('Parses DespatchAdvice (Guía de Remisión) correctly', () => {
+  it('Parses DespatchAdvice (Guía de Remisión) correctly with base XML unit', () => {
     const { reception, items } = parseSunatXml(SAMPLE_DESPATCH_ADVICE_XML, dom.window.DOMParser);
 
     expect(reception.documentType).toBe('DespatchAdvice');
@@ -44,13 +54,13 @@ describe('SUNAT XML Parser and Warehouse Rules', () => {
     expect(items[0].itemCode).toBe('50974001');
     expect(items[0].unitName).toBe('Caja');
     expect(items[0].expectedQuantity).toBe(5);
-    expect(items[0].suggestedConversion).toBe(24);
+    expect(items[0].conversionFactor).toBe(1);
 
     // Item 2
     expect(items[1].itemCode).toBe('50974002');
     expect(items[1].unitName).toBe('Paquete');
     expect(items[1].expectedQuantity).toBe(10);
-    expect(items[1].suggestedConversion).toBe(100);
+    expect(items[1].suggestedConversion).toBe(null);
 
     // Item 3
     expect(items[2].itemCode).toBe('50974003');

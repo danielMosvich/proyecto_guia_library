@@ -101,26 +101,26 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-5 space-y-5">
-      {/* Welcome Banner & Value Prop */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 sm:p-5 rounded-2xl shadow-lg border border-slate-700/60">
+    <div className="max-w-2xl mx-auto px-3.5 py-4 space-y-4">
+      {/* Welcome Banner (iOS Light Card) */}
+      <div className="bg-white text-[#1C1C1E] p-4 sm:p-5 rounded-2xl shadow-xs border border-[#E5E5EA]">
         <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-              <Sparkles className="w-3 h-3" />
-              <span>Offline-First · 100% Persistente</span>
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E5F2FF] text-[#007AFF] border border-[#CCE5FF]">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Offline-First · Almacén SUNAT</span>
             </span>
-            <h2 className="text-lg font-black text-white leading-tight">
-              Control de Ingreso en Almacén
+            <h2 className="text-lg font-bold text-[#1C1C1E] leading-tight">
+              Control de Ingreso y Recepción
             </h2>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Carga Guías de Remisión (<code className="text-blue-300 font-mono">DespatchAdvice</code>) o Facturas (<code className="text-blue-300 font-mono">Invoice</code>) de SUNAT Perú. Cuenta mercadería caja por caja con el pulgar.
+            <p className="text-xs text-[#8E8E93] leading-relaxed">
+              Carga Guías (<code className="text-[#007AFF] font-mono bg-[#F2F2F7] px-1 py-0.5 rounded">DespatchAdvice</code>) o Facturas (<code className="text-[#007AFF] font-mono bg-[#F2F2F7] px-1 py-0.5 rounded">Invoice</code>) de SUNAT Perú. Cuenta mercadería caja por caja con una sola mano.
             </p>
           </div>
         </div>
 
-        {/* Big Upload Area */}
-        <div className="mt-4 pt-3 border-t border-slate-700/80 flex flex-col sm:flex-row gap-2.5">
+        {/* Big Upload Area (iOS Colors) */}
+        <div className="mt-4 pt-3.5 border-t border-[#E5E5EA] flex flex-col sm:flex-row gap-2.5">
           <input
             type="file"
             ref={fileInputRef}
@@ -134,35 +134,35 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing}
-            className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 text-xs transition-transform active:scale-98 min-h-[48px]"
+            className="flex-1 py-3 px-4 bg-[#007AFF] hover:bg-[#0066D6] active:bg-[#0055B3] text-white font-bold rounded-xl shadow-xs flex items-center justify-center gap-2 text-xs transition-transform active:scale-98 min-h-[44px]"
           >
             <Upload className="w-4 h-4" />
-            <span>{isProcessing ? 'Procesando XML...' : 'Subir XML de SUNAT (.xml)'}</span>
+            <span>{isProcessing ? 'Procesando XML...' : 'Subir XML SUNAT (.xml)'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleLoadSampleGuide}
             disabled={isProcessing}
-            className="py-3 px-3.5 bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-slate-200 font-semibold rounded-xl border border-slate-600 flex items-center justify-center gap-1.5 text-xs transition-colors min-h-[48px]"
+            className="py-3 px-3.5 bg-[#F2F2F7] hover:bg-[#E5E5EA] active:bg-[#D1D1D6] text-[#1C1C1E] font-semibold rounded-xl border border-[#E5E5EA] flex items-center justify-center gap-1.5 text-xs transition-colors min-h-[44px]"
           >
-            <FileCode className="w-4 h-4 text-emerald-400" />
-            <span>Cargar Guía de Prueba</span>
+            <FileCode className="w-4 h-4 text-[#34C759]" />
+            <span>Guía de Prueba</span>
           </button>
         </div>
       </div>
 
       {/* Error alert if any */}
       {errorMessage && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-900 text-xs">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+        <div className="p-3.5 bg-[#FFEBEA] border border-[#FFD0CE] rounded-2xl flex items-start gap-2.5 text-[#FF3B30] text-xs">
+          <AlertCircle className="w-4 h-4 text-[#FF3B30] shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-bold">Error en el archivo</p>
-            <p className="text-[11px] text-rose-800 mt-0.5">{errorMessage}</p>
+            <p className="text-[11px] text-[#FF3B30] mt-0.5">{errorMessage}</p>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-rose-500 hover:text-rose-700 p-1"
+            className="text-[#FF3B30] hover:opacity-75 p-1"
           >
             ✕
           </button>
@@ -171,14 +171,14 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
 
       {/* Receptions History */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider">
             Recepciones en Dispositivo ({receptions?.length || 0})
           </h3>
           {receptions && receptions.length > 0 && (
             <button
               onClick={handleLoadSampleInvoice}
-              className="text-[11px] font-semibold text-blue-600 hover:text-blue-800"
+              className="text-[11px] font-semibold text-[#007AFF] hover:underline"
             >
               + Probar con Factura
             </button>
@@ -186,20 +186,20 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
         </div>
 
         {(!receptions || receptions.length === 0) ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+          <div className="bg-white border border-[#E5E5EA] rounded-2xl p-8 text-center space-y-3 shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-[#F2F2F7] flex items-center justify-center mx-auto text-[#8E8E93]">
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-slate-800 text-sm">No hay recepciones activas</h4>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1">
+              <h4 className="font-bold text-[#1C1C1E] text-sm">No hay recepciones activas</h4>
+              <p className="text-xs text-[#8E8E93] max-w-xs mx-auto mt-1">
                 Sube un comprobante XML de SUNAT o presiona el botón de prueba para explorar el flujo completo de almacén.
               </p>
             </div>
             <button
               type="button"
               onClick={handleLoadSampleGuide}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition-transform active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#34C759] hover:bg-[#2EB84F] text-white font-bold rounded-xl text-xs shadow-xs transition-transform active:scale-95"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Cargar Guía de Prueba Inmediata</span>
@@ -220,28 +220,28 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
                 <div
                   key={rec.id}
                   onClick={() => onSelectReception(rec.id)}
-                  className="bg-white rounded-2xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all p-4 cursor-pointer space-y-3"
+                  className="bg-white rounded-2xl border border-[#E5E5EA] hover:border-[#007AFF] shadow-xs hover:shadow-sm transition-all p-4 cursor-pointer space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-[#E5F2FF] text-[#007AFF] border border-[#CCE5FF]">
                           {rec.documentType === 'DespatchAdvice' ? 'Guía' : 'Factura'} {rec.serieNumero}
                         </span>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             rec.status === 'cerrada'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
+                              ? 'bg-[#EBF9EE] text-[#34C759]'
+                              : 'bg-[#FFF4E5] text-[#FF9500]'
                           }`}
                         >
                           {rec.status === 'cerrada' ? 'Cerrada' : 'En Curso'}
                         </span>
                       </div>
-                      <h4 className="font-bold text-slate-900 text-sm mt-1 truncate">
+                      <h4 className="font-bold text-[#1C1C1E] text-sm mt-1.5 truncate">
                         {rec.proveedorNombre}
                       </h4>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-[#8E8E93]">
                         RUC: {rec.proveedorRuc} · Emisión: {rec.fechaEmision}
                       </p>
                     </div>
@@ -254,7 +254,7 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
                           onOpenSummary(rec);
                         }}
                         title="Ver resumen y reportes"
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-[#8E8E93] hover:text-[#007AFF] hover:bg-[#E5F2FF] rounded-xl transition-colors"
                       >
                         <Share2 className="w-4 h-4" />
                       </button>
@@ -262,7 +262,7 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
                         type="button"
                         onClick={(e) => handleDelete(rec.id, rec.serieNumero, e)}
                         title="Eliminar recepción"
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        className="p-2 text-[#8E8E93] hover:text-[#FF3B30] hover:bg-[#FFEBEA] rounded-xl transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -270,18 +270,18 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
                   </div>
 
                   {/* Progress Bar & KPIs */}
-                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                  <div className="space-y-1.5 pt-1 border-t border-[#E5E5EA]">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-600 font-medium">
+                      <span className="text-[#3A3A3C] font-medium">
                         Progreso: <strong>{completeItems.length}</strong> de <strong>{standardItems.length}</strong> conformes
                       </span>
-                      <span className="font-bold text-slate-800">{percent}%</span>
+                      <span className="font-bold text-[#1C1C1E]">{percent}%</span>
                     </div>
 
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-[#E5E5EA] rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
-                          percent === 100 ? 'bg-emerald-500' : 'bg-blue-600'
+                          percent === 100 ? 'bg-[#34C759]' : 'bg-[#007AFF]'
                         }`}
                         style={{ width: `${percent}%` }}
                       />
@@ -290,11 +290,11 @@ export const ReceptionList: React.FC<ReceptionListProps> = ({
 
                   {/* Bottom Action Footer */}
                   <div className="flex items-center justify-between pt-1 text-xs">
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-[#8E8E93]">
                       Actualizado: {new Date(rec.updatedAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
                     </span>
 
-                    <span className="font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                    <span className="font-bold text-[#007AFF] flex items-center gap-0.5">
                       <span>{rec.status === 'cerrada' ? 'Ver Detalle' : 'Continuar Conteo'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </span>

@@ -20,9 +20,10 @@ export type ExtraReason =
 
 export interface PartialCountEntry {
   id: string;
-  amount: number;             // Amount in base unit
+  amount: number;             // Amount added (in XML units or loose units)
   inputAmount: number;        // Raw input entered by user
-  unitUsed: string;           // E.g. "Caja" or "Unidad"
+  unitUsed: string;           // E.g. "Caja" or "Unidades"
+  isLooseUnit?: boolean;      // True if entered as loose units
   boxTag?: string;            // E.g. "Caja 1", "Parihuela 3"
   timestamp: number;
 }
@@ -36,15 +37,17 @@ export interface ReceptionItem {
   rawUnitCode: string;        // E.g. "NIU", "BX", "PK"
   unitName: string;           // Translated Spanish singular: "Unidad", "Caja"
   unitNamePlural: string;     // Translated Spanish plural: "Unidades", "Cajas"
-  expectedQuantity: number;   // Expected in base unit
-  receivedQuantity: number;   // Currently received in base unit
+  expectedQuantity: number;   // Expected in XML unit (e.g. 2 Cajas)
+  receivedQuantity: number;   // Currently received in XML unit (e.g. 1 Caja)
   unitPrice: number;          // Unit price (from Invoice or 0)
   
-  // Unit conversion settings
-  conversionActive: boolean;
-  conversionFactor: number;   // E.g., 1 Caja = 12 Unidades
+  // Loose units & conversion settings
+  looseUnitsReceived: number; // Conteo de unidades sueltas recibidas (ej. 5)
+  conversionActive: boolean;  // True si el usuario definió un factor manual
+  conversionFactor: number;   // Factor manual (ej. 1 Caja = 12 Unidades)
   conversionTargetUnit?: string; // E.g. "Unidad"
-  suggestedConversion?: number | null; // Auto-detected from CAX12, etc.
+  suggestedConversion?: number | null; // Deprecated: keep optional null for compat
+  manualCompleted?: boolean;  // True si el usuario lo marcó manualmente como completo
 
   // Status & Incidents
   status: ItemStatus;

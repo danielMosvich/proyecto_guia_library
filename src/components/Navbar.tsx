@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PackageCheck, Wifi, WifiOff, Download, ArrowLeft } from 'lucide-react';
+import { PackageCheck, Wifi, WifiOff, Download, ChevronLeft } from 'lucide-react';
 
 interface NavbarProps {
   onBack?: () => void;
@@ -45,28 +45,29 @@ export const Navbar: React.FC<NavbarProps> = ({ onBack, title, subtitle }) => {
   };
 
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 select-none">
-      <div className="max-w-2xl mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
+    <header className="bg-white/90 backdrop-blur-md text-[#1C1C1E] border-b border-[#E5E5EA] sticky top-0 z-40 select-none">
+      <div className="max-w-2xl mx-auto px-3.5 py-2.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {onBack ? (
             <button
               onClick={onBack}
               aria-label="Volver a recepciones"
-              className="p-2 -ml-1 text-slate-300 hover:text-white active:bg-slate-800 rounded-lg transition-colors flex items-center justify-center min-w-[40px] min-h-[40px]"
+              className="p-1 -ml-1 text-[#007AFF] hover:bg-slate-100 active:bg-slate-200 rounded-xl transition-colors flex items-center gap-0.5 min-w-[36px] min-h-[36px] font-medium"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 -mr-1" />
+              <span className="text-xs font-semibold hidden xs:inline">Atrás</span>
             </button>
           ) : (
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-md shrink-0">
-              <PackageCheck className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-xl bg-[#007AFF] flex items-center justify-center shadow-xs shrink-0 text-white">
+              <PackageCheck className="w-4 h-4" />
             </div>
           )}
 
           <div className="min-w-0">
-            <h1 className="text-sm font-bold text-white truncate leading-tight">
+            <h1 className="text-sm font-bold text-[#1C1C1E] truncate leading-tight">
               {title || 'Recepción Almacén SUNAT'}
             </h1>
-            <p className="text-xs text-slate-400 truncate leading-tight">
+            <p className="text-[11px] text-[#8E8E93] truncate leading-tight">
               {subtitle || 'Guías & Facturas · Offline 100%'}
             </p>
           </div>
@@ -76,7 +77,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onBack, title, subtitle }) => {
           {canInstall && (
             <button
               onClick={handleInstallClick}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-full shadow-sm transition-transform active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-[#007AFF] hover:bg-[#0066D6] active:scale-95 text-white rounded-full shadow-xs transition-transform"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Instalar</span>
@@ -84,10 +85,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onBack, title, subtitle }) => {
           )}
 
           <div
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${
+            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
               isOnline
-                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80'
-                : 'bg-amber-950/80 text-amber-300 border-amber-800/80 animate-pulse'
+                ? 'bg-[#EBF9EE] text-[#34C759] border-[#D1F2D9]'
+                : 'bg-[#FFF4E5] text-[#FF9500] border-[#FFE2BF] animate-pulse'
             }`}
             title={isOnline ? 'Conexión activa' : 'Modo Offline - Guardando en IndexedDB'}
           >

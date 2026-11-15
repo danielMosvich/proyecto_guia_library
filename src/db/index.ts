@@ -24,7 +24,11 @@ export function computeItemStatus(
   expected: number,
   incident: IncidentType,
   isExtra: boolean,
-  observations: string = ''
+  observations: string = '',
+  looseUnits: number = 0,
+  conversionActive: boolean = false,
+  conversionFactor: number = 1,
+  manualCompleted: boolean = false
 ): ItemStatus {
   if (isExtra) {
     return 'extra';
@@ -32,17 +36,34 @@ export function computeItemStatus(
   if (incident !== 'ninguno' && incident !== 'sobrante') {
     return 'observado';
   }
-  if (received <= 0) {
-    return 'pendiente';
-  }
-  if (received < expected) {
-    return 'parcial';
-  }
-  if (received === expected) {
+  if (manualCompleted) {
     return observations.trim().length > 0 ? 'observado' : 'completo';
   }
-  // received > expected
-  return 'observado';
+
+  // 1. Con factor manual activo (ej. 1 Caja = 12 Unidades)
+  if (conversionActive && conversionFactor > 1) {
+    const totalExpectedUnits = expected * conversionFactor;
+    const totalReceivedUnits = (received * conversionFactor) + looseUnits;
+    if (totalReceivedUnits <= 0) return 'pendiente';
+    if (totalReceivedUnits < totalExpectedUnits) return 'parcial';
+    if (totalReceivedUnits === totalExpectedUnits) {
+      return observations.trim().length > 0 ? 'observado' : 'completo';
+    }
+    return 'observado'; // sobrante
+  }
+
+  // 2. Conteo estándar en la unidad del XML o mixto sin factor
+  if (received <= 0 && looseUnits <= 0) {
+    return 'pendiente';
+  }
+  if (received === expected && looseUnits === 0) {
+    return observations.trim().length > 0 ? 'observado' : 'completo';
+  }
+  if (received > expected) {
+    return 'observado'; // sobrante
+  }
+  // Parcial (conteo incompleto o mixto con unidades sueltas esperando confirmación manual)
+  return 'parcial';
 }
 
 /**
@@ -56,45 +77,87 @@ export async function saveReceptionWithItems(reception: Reception, items: Recept
 }
 
 /**
- * Increments an item's count (e.g. +14 units or +2 boxes).
+ * Increments an item's count (either in XML units or loose units).
  * Adds to the partial counts history and recalculates status.
  */
 export async function addItemCount(
   itemId: string,
-  baseUnitsToAdd: number,
+  amountToAdd: number,
   rawInput: number,
   unitUsed: string,
-  boxTag?: string
+  boxTag?: string,
+  isLooseUnit: boolean = false,
+  manualFactor?: number
 ): Promise<ReceptionItem | null> {
   return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
     const item = await db.receptionItems.get(itemId);
     if (!item) return null;
 
-    const newReceived = Math.max(0, item.receivedQuantity + baseUnitsToAdd);
+    let conversionActive = item.conversionActive;
+    let conversionFactor = item.conversionFactor;
+
+    if (manualFactor && manualFactor > 1) {
+      conversionActive = true;
+      conversionFactor = manualFactor;
+    }
+
+    let newReceived = item.receivedQuantity;
+    let newLoose = item.looseUnitsReceived || 0;
+
+    if (isLooseUnit) {
+      newLoose = Math.max(0, newLoose + amountToAdd);
+    } else {
+      newReceived = Math.max(0, newReceived + amountToAdd);
+    }
+
     const newEntry: PartialCountEntry = {
       id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
-      amount: baseUnitsToAdd,
+      amount: amountToAdd,
       inputAmount: rawInput,
       unitUsed,
+      isLooseUnit,
       boxTag: boxTag?.trim() || undefined,
       timestamp: Date.now()
     };
 
     const newPartialCounts = [...(item.partialCounts || []), newEntry];
-    
+
     // Auto-detect surplus
     let incident = item.incidentType;
-    if (newReceived > item.expectedQuantity && !item.isExtra && incident === 'ninguno') {
-      incident = 'sobrante';
-    } else if (newReceived <= item.expectedQuantity && incident === 'sobrante') {
-      incident = 'ninguno';
+    if (conversionActive && conversionFactor > 1) {
+      const totalExp = item.expectedQuantity * conversionFactor;
+      const totalRec = (newReceived * conversionFactor) + newLoose;
+      if (totalRec > totalExp && !item.isExtra && incident === 'ninguno') {
+        incident = 'sobrante';
+      } else if (totalRec <= totalExp && incident === 'sobrante') {
+        incident = 'ninguno';
+      }
+    } else {
+      if (newReceived > item.expectedQuantity && !item.isExtra && incident === 'ninguno') {
+        incident = 'sobrante';
+      } else if (newReceived <= item.expectedQuantity && incident === 'sobrante') {
+        incident = 'ninguno';
+      }
     }
 
-    const newStatus = computeItemStatus(newReceived, item.expectedQuantity, incident, item.isExtra, item.observations);
+    const newStatus = computeItemStatus(
+      newReceived,
+      item.expectedQuantity,
+      incident,
+      item.isExtra,
+      item.observations,
+      newLoose,
+      conversionActive,
+      conversionFactor,
+      item.manualCompleted || false
+    );
 
     const updatedItem: ReceptionItem = {
       ...item,
       receivedQuantity: newReceived,
+      looseUnitsReceived: newLoose,
+      conversionActive,
+      conversionFactor,
       partialCounts: newPartialCounts,
       incidentType: incident,
       status: newStatus,
@@ -109,7 +172,7 @@ export async function addItemCount(
 }
 
 /**
- * Sets an item's count to exactly the expected quantity in 1 tap (✓ Todo / + Resto).
+ * Sets an item's count to exactly the expected quantity in 1 tap (Todo / Resto).
  */
 export async function setItemToExpectedQuantity(itemId: string): Promise<ReceptionItem | null> {
   return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
@@ -117,10 +180,6 @@ export async function setItemToExpectedQuantity(itemId: string): Promise<Recepti
     if (!item) return null;
 
     const needed = item.expectedQuantity - item.receivedQuantity;
-    if (needed <= 0 && item.receivedQuantity === item.expectedQuantity) {
-      return item; // already full
-    }
-
     const amountToAdd = needed > 0 ? needed : item.expectedQuantity;
     const newReceived = item.expectedQuantity;
 
@@ -138,13 +197,59 @@ export async function setItemToExpectedQuantity(itemId: string): Promise<Recepti
       ? 'ninguno' 
       : item.incidentType;
 
-    const newStatus = computeItemStatus(newReceived, item.expectedQuantity, incident, item.isExtra, item.observations);
+    const newStatus = computeItemStatus(
+      newReceived,
+      item.expectedQuantity,
+      incident,
+      item.isExtra,
+      item.observations,
+      0,
+      item.conversionActive,
+      item.conversionFactor,
+      true
+    );
 
     const updatedItem: ReceptionItem = {
       ...item,
       receivedQuantity: newReceived,
+      looseUnitsReceived: 0,
+      manualCompleted: true,
       partialCounts: newPartialCounts,
       incidentType: incident,
+      status: newStatus,
+      updatedAt: Date.now()
+    };
+
+    await db.receptionItems.put(updatedItem);
+    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
+
+    return updatedItem;
+  });
+}
+
+/**
+ * Manually marks an item as Complete (or toggles it), especially for mixed counts without factor.
+ */
+export async function setItemManualComplete(itemId: string, completed: boolean = true): Promise<ReceptionItem | null> {
+  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
+    const item = await db.receptionItems.get(itemId);
+    if (!item) return null;
+
+    const newStatus = computeItemStatus(
+      item.receivedQuantity,
+      item.expectedQuantity,
+      item.incidentType,
+      item.isExtra,
+      item.observations,
+      item.looseUnitsReceived || 0,
+      item.conversionActive,
+      item.conversionFactor,
+      completed
+    );
+
+    const updatedItem: ReceptionItem = {
+      ...item,
+      manualCompleted: completed,
       status: newStatus,
       updatedAt: Date.now()
     };
@@ -166,18 +271,38 @@ export async function undoLastPartialCount(itemId: string): Promise<ReceptionIte
 
     const lastEntry = item.partialCounts[item.partialCounts.length - 1];
     const newPartialCounts = item.partialCounts.slice(0, -1);
-    const newReceived = Math.max(0, item.receivedQuantity - lastEntry.amount);
+
+    let newReceived = item.receivedQuantity;
+    let newLoose = item.looseUnitsReceived || 0;
+
+    if (lastEntry.isLooseUnit) {
+      newLoose = Math.max(0, newLoose - lastEntry.amount);
+    } else {
+      newReceived = Math.max(0, newReceived - lastEntry.amount);
+    }
 
     let incident = item.incidentType;
     if (newReceived <= item.expectedQuantity && incident === 'sobrante') {
       incident = 'ninguno';
     }
 
-    const newStatus = computeItemStatus(newReceived, item.expectedQuantity, incident, item.isExtra, item.observations);
+    const newStatus = computeItemStatus(
+      newReceived,
+      item.expectedQuantity,
+      incident,
+      item.isExtra,
+      item.observations,
+      newLoose,
+      item.conversionActive,
+      item.conversionFactor,
+      false // reset manual completed on undo
+    );
 
     const updatedItem: ReceptionItem = {
       ...item,
       receivedQuantity: newReceived,
+      looseUnitsReceived: newLoose,
+      manualCompleted: false,
       partialCounts: newPartialCounts,
       incidentType: incident,
       status: newStatus,
@@ -208,7 +333,11 @@ export async function updateItemIncident(
       item.expectedQuantity,
       incidentType,
       item.isExtra,
-      observations
+      observations,
+      item.looseUnitsReceived || 0,
+      item.conversionActive,
+      item.conversionFactor,
+      item.manualCompleted || false
     );
 
     const updatedItem: ReceptionItem = {
@@ -235,19 +364,33 @@ export async function updateItemConversion(
   conversionFactor: number,
   conversionTargetUnit?: string
 ): Promise<ReceptionItem | null> {
-  return await db.transaction('rw', db.receptionItems, async () => {
+  return await db.transaction('rw', db.receptionItems, db.receptions, async () => {
     const item = await db.receptionItems.get(itemId);
     if (!item) return null;
+
+    const newStatus = computeItemStatus(
+      item.receivedQuantity,
+      item.expectedQuantity,
+      item.incidentType,
+      item.isExtra,
+      item.observations,
+      item.looseUnitsReceived || 0,
+      conversionActive,
+      Math.max(1, conversionFactor),
+      item.manualCompleted || false
+    );
 
     const updatedItem: ReceptionItem = {
       ...item,
       conversionActive,
       conversionFactor: Math.max(1, conversionFactor),
       conversionTargetUnit: conversionTargetUnit || item.conversionTargetUnit,
+      status: newStatus,
       updatedAt: Date.now()
     };
 
     await db.receptionItems.put(updatedItem);
+    await db.receptions.update(item.receptionId, { updatedAt: Date.now() });
     return updatedItem;
   });
 }
@@ -281,6 +424,7 @@ export async function addExtraItem(
     unitNamePlural: data.unitNamePlural,
     expectedQuantity: 0,
     receivedQuantity: data.quantity,
+    looseUnitsReceived: 0,
     unitPrice: 0,
     conversionActive: false,
     conversionFactor: 1,
@@ -331,7 +475,7 @@ export async function closeReception(
 
     if (autoMarkMissing) {
       for (const item of items) {
-        if (!item.isExtra && item.receivedQuantity < item.expectedQuantity) {
+        if (!item.isExtra && item.status !== 'completo') {
           const diff = item.expectedQuantity - item.receivedQuantity;
           const currentObs = item.observations ? item.observations + ' | ' : '';
           const newObs = `${currentObs}Faltante detectado al cierre (${diff} ${diff === 1 ? item.unitName : item.unitNamePlural})`;

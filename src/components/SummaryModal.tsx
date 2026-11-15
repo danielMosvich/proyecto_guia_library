@@ -57,7 +57,6 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
-        // Fallback for older browsers
         const textarea = document.createElement('textarea');
         textarea.value = text;
         document.body.appendChild(textarea);
@@ -82,23 +81,30 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] pb-safe"
+        className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
+        {/* iOS Grabber */}
+        <div className="pt-2.5 pb-1 flex justify-center">
+          <div className="w-9 h-1 bg-[#D1D1D6] rounded-full" />
+        </div>
+
+        {/* Header (iOS Light) */}
+        <div className="px-4 py-2.5 bg-white text-[#1C1C1E] flex items-center justify-between border-b border-[#E5E5EA]">
           <div className="flex items-center gap-2">
-            <Share2 className="w-5 h-5 text-blue-400" />
+            <div className="p-1.5 rounded-xl bg-[#E5F2FF] text-[#007AFF]">
+              <Share2 className="w-5 h-5" />
+            </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Resumen y Reportes de Recepción</h2>
-              <p className="text-[11px] text-slate-400">
+              <h2 className="text-sm font-bold text-[#1C1C1E]">Resumen y Reportes</h2>
+              <p className="text-[11px] text-[#8E8E93]">
                 {reception.serieNumero} · {reception.proveedorNombre}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#F2F2F7] text-[#8E8E93]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -106,33 +112,33 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
         {/* Content */}
         <div className="p-4 space-y-4 overflow-y-auto text-xs">
           {/* Main Status & Conformity Card */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+          <div className="p-4 bg-[#F2F2F7] border border-[#E5E5EA] rounded-2xl flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
                   reception.status === 'cerrada'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-800'
+                    ? 'bg-[#EBF9EE] text-[#34C759]'
+                    : 'bg-[#FFF4E5] text-[#FF9500]'
                 }`}>
                   {reception.status === 'cerrada' ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                   {reception.status === 'cerrada' ? 'Recepción Cerrada' : 'En Curso (Abierta)'}
                 </span>
                 {reception.closedAt && (
-                  <span className="text-[11px] text-slate-500">
+                  <span className="text-[11px] text-[#8E8E93]">
                     {new Date(reception.closedAt).toLocaleDateString('es-PE')} {new Date(reception.closedAt).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
               </div>
-              <div className="text-slate-600 mt-1.5">
+              <div className="text-[#3A3A3C] font-medium mt-1.5">
                 {completeItems.length} de {standardItems.length} productos 100% conformes
               </div>
             </div>
 
             <div className="text-right">
-              <div className="text-3xl font-black text-slate-900">
+              <div className="text-3xl font-black text-[#1C1C1E]">
                 {conformityPercent}%
               </div>
-              <div className="text-[10px] uppercase font-bold text-slate-400">
+              <div className="text-[10px] uppercase font-bold text-[#8E8E93]">
                 Conformidad
               </div>
             </div>
@@ -140,27 +146,27 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
 
           {/* Quick Actions (WhatsApp, CSV, JSON) */}
           <div className="space-y-2">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">
               Exportación y Entrega al Supervisor
             </span>
 
             {/* WhatsApp 1-tap copy button */}
             <button
               onClick={handleCopyWhatsApp}
-              className={`w-full py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-sm transition-all min-h-[48px] ${
+              className={`w-full py-3.5 px-4 rounded-2xl font-bold flex items-center justify-center gap-2.5 shadow-xs transition-all min-h-[48px] ${
                 copied
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-800 border-2 border-emerald-500'
+                  ? 'bg-[#34C759] text-white'
+                  : 'bg-[#EBF9EE] hover:bg-[#D5F5DA] active:bg-[#C2EFCB] text-[#34C759] border border-[#D1F2D9]'
               }`}
             >
               {copied ? (
                 <>
-                  <Check className="w-5 h-5 animate-scale" />
+                  <Check className="w-5 h-5" />
                   <span>¡Copiado! Listo para pegar en WhatsApp</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-5 h-5 text-emerald-700" />
+                  <Copy className="w-5 h-5 text-[#34C759]" />
                   <span>Copiar Resumen para Jefe / WhatsApp</span>
                 </>
               )}
@@ -170,17 +176,17 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 onClick={handleExportCSV}
-                className="py-2.5 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-semibold flex items-center justify-center gap-1.5 text-xs shadow-2xs min-h-[44px]"
+                className="py-3 px-3 rounded-2xl border border-[#E5E5EA] bg-white hover:bg-[#F2F2F7] active:bg-[#E5E5EA] text-[#1C1C1E] font-bold flex items-center justify-center gap-1.5 text-xs shadow-2xs min-h-[44px]"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <FileSpreadsheet className="w-4 h-4 text-[#34C759]" />
                 <span>Descargar Excel (CSV)</span>
               </button>
 
               <button
                 onClick={handleExportPOS}
-                className="py-2.5 px-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-semibold flex items-center justify-center gap-1.5 text-xs shadow-2xs min-h-[44px]"
+                className="py-3 px-3 rounded-2xl border border-[#E5E5EA] bg-white hover:bg-[#F2F2F7] active:bg-[#E5E5EA] text-[#1C1C1E] font-bold flex items-center justify-center gap-1.5 text-xs shadow-2xs min-h-[44px]"
               >
-                <FileJson className="w-4 h-4 text-blue-600" />
+                <FileJson className="w-4 h-4 text-[#007AFF]" />
                 <span>Exportar JSON POS</span>
               </button>
             </div>
@@ -189,72 +195,72 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
           {/* Discrepancies Details Preview */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-wider">
                 Excepciones y Novedades del Ingreso
               </span>
-              <span className="text-[11px] font-semibold text-slate-500">
+              <span className="text-[11px] font-semibold text-[#8E8E93]">
                 {missingItems.length + damagedItems.length + surplusItems.length + extraItems.length} registros
               </span>
             </div>
 
             {missingItems.length === 0 && damagedItems.length === 0 && surplusItems.length === 0 && extraItems.length === 0 ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-emerald-800">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
+              <div className="p-4 bg-[#EBF9EE] border border-[#D1F2D9] rounded-2xl text-center text-[#34C759]">
+                <CheckCircle2 className="w-6 h-6 text-[#34C759] mx-auto mb-1" />
                 <p className="font-bold text-xs">Sin discrepancias</p>
-                <p className="text-[11px] text-emerald-700">Toda la mercadería se recibió completa y conforme.</p>
+                <p className="text-[11px] text-[#34C759]">Toda la mercadería se recibió completa y conforme.</p>
               </div>
             ) : (
               <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                 {missingItems.map(item => (
-                  <div key={item.id} className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white font-black text-[10px] shrink-0 mt-0.5">
+                  <div key={item.id} className="p-3 bg-[#FFEBEA] border border-[#FFD0CE] rounded-2xl flex items-start gap-2">
+                    <span className="px-1.5 py-0.5 rounded-md bg-[#FF3B30] text-white font-black text-[10px] shrink-0 mt-0.5">
                       FALTANTE
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-slate-900 truncate">[{item.itemCode}] {item.description}</div>
-                      <div className="text-slate-600 text-[11px]">
+                      <div className="font-bold text-[#1C1C1E] truncate">[{item.itemCode}] {item.description}</div>
+                      <div className="text-[#3A3A3C] text-[11px]">
                         Recibido: {item.receivedQuantity} / Esperado: {item.expectedQuantity} {item.unitNamePlural}
-                        <strong className="text-rose-700 ml-1">(-{item.expectedQuantity - item.receivedQuantity})</strong>
+                        <strong className="text-[#FF3B30] ml-1">(-{item.expectedQuantity - item.receivedQuantity})</strong>
                       </div>
                     </div>
                   </div>
                 ))}
 
                 {damagedItems.map(item => (
-                  <div key={item.id} className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-amber-600 text-white font-black text-[10px] shrink-0 mt-0.5 uppercase">
+                  <div key={item.id} className="p-3 bg-[#FFF4E5] border border-[#FFE2BF] rounded-2xl flex items-start gap-2">
+                    <span className="px-1.5 py-0.5 rounded-md bg-[#FF9500] text-white font-black text-[10px] shrink-0 mt-0.5 uppercase">
                       {item.incidentType}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-slate-900 truncate">[{item.itemCode}] {item.description}</div>
-                      <div className="text-slate-600 text-[11px]">{item.observations || 'Sin detalle adicional'}</div>
+                      <div className="font-bold text-[#1C1C1E] truncate">[{item.itemCode}] {item.description}</div>
+                      <div className="text-[#3A3A3C] text-[11px]">{item.observations || 'Sin detalle adicional'}</div>
                     </div>
                   </div>
                 ))}
 
                 {surplusItems.map(item => (
-                  <div key={item.id} className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white font-black text-[10px] shrink-0 mt-0.5">
+                  <div key={item.id} className="p-3 bg-[#E5F2FF] border border-[#CCE5FF] rounded-2xl flex items-start gap-2">
+                    <span className="px-1.5 py-0.5 rounded-md bg-[#007AFF] text-white font-black text-[10px] shrink-0 mt-0.5">
                       SOBRANTE
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-slate-900 truncate">[{item.itemCode}] {item.description}</div>
-                      <div className="text-slate-600 text-[11px]">
+                      <div className="font-bold text-[#1C1C1E] truncate">[{item.itemCode}] {item.description}</div>
+                      <div className="text-[#3A3A3C] text-[11px]">
                         Recibido: {item.receivedQuantity} / Esperado: {item.expectedQuantity}
-                        <strong className="text-blue-700 ml-1">(+{item.receivedQuantity - item.expectedQuantity})</strong>
+                        <strong className="text-[#007AFF] ml-1">(+{item.receivedQuantity - item.expectedQuantity})</strong>
                       </div>
                     </div>
                   </div>
                 ))}
 
                 {extraItems.map(item => (
-                  <div key={item.id} className="p-2.5 bg-purple-50 border border-purple-200 rounded-xl flex items-start gap-2">
-                    <span className="px-1.5 py-0.5 rounded bg-purple-600 text-white font-black text-[10px] shrink-0 mt-0.5">
+                  <div key={item.id} className="p-3 bg-[#F5EAFB] border border-[#E8CEF7] rounded-2xl flex items-start gap-2">
+                    <span className="px-1.5 py-0.5 rounded-md bg-[#AF52DE] text-white font-black text-[10px] shrink-0 mt-0.5">
                       EXTRA
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="font-bold text-slate-900 truncate">[{item.itemCode}] {item.description}</div>
-                      <div className="text-slate-600 text-[11px]">
+                      <div className="font-bold text-[#1C1C1E] truncate">[{item.itemCode}] {item.description}</div>
+                      <div className="text-[#3A3A3C] text-[11px]">
                         Cantidad: {formatQuantityWithUnit(item.receivedQuantity, item.unitName, item.unitNamePlural)} ({item.extraReason})
                       </div>
                     </div>
@@ -266,16 +272,16 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
 
           {/* Re-open option if closed */}
           {reception.status === 'cerrada' && onReopen && (
-            <div className="pt-2 border-t border-slate-200">
+            <div className="pt-2 border-t border-[#E5E5EA]">
               <button
                 type="button"
                 onClick={() => {
                   onReopen();
                   onClose();
                 }}
-                className="w-full py-2 px-3 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 px-3 text-xs font-semibold text-[#007AFF] hover:bg-[#E5F2FF] rounded-xl flex items-center justify-center gap-1.5"
               >
-                <Unlock className="w-3.5 h-3.5 text-amber-600" />
+                <Unlock className="w-3.5 h-3.5" />
                 <span>Reabrir edición (Desbloquear botones de conteo)</span>
               </button>
             </div>
@@ -283,11 +289,11 @@ export const SummaryModal: React.FC<SummaryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200">
+        <div className="p-3.5 bg-white border-t border-[#E5E5EA]">
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs min-h-[44px]"
+            className="w-full py-3 px-4 bg-[#007AFF] hover:bg-[#0066D6] text-white font-bold rounded-2xl text-xs min-h-[44px]"
           >
             Cerrar Ventana
           </button>

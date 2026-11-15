@@ -5,6 +5,7 @@ import {
   saveReceptionWithItems,
   addItemCount,
   setItemToExpectedQuantity,
+  setItemManualComplete,
   undoLastPartialCount,
   updateItemIncident,
   updateItemConversion,
@@ -46,6 +47,8 @@ describe('Warehouse IndexedDB Persistence & Business Logic', () => {
     unitNamePlural: 'Unidades',
     expectedQuantity: 48,
     receivedQuantity: 0,
+    looseUnitsReceived: 0,
+    manualCompleted: false,
     unitPrice: 0,
     conversionActive: false,
     conversionFactor: 1,
@@ -144,6 +147,56 @@ describe('Warehouse IndexedDB Persistence & Business Logic', () => {
 
     const count = await db.receptionItems.where('receptionId').equals(testReception.id).count();
     expect(count).toBe(2);
+  });
+
+  it('Supports counting loose units without factor and marking as Complete manually', async () => {
+    // 2 Boxes expected
+    const boxItem = {
+      ...testItem,
+      id: 'rec_box_1',
+      unitName: 'Caja',
+      unitNamePlural: 'Cajas',
+      expectedQuantity: 2,
+      receivedQuantity: 1, // 1 Box received
+      looseUnitsReceived: 0
+    };
+    await saveReceptionWithItems(testReception, [boxItem]);
+
+    // Add 5 loose units without factor
+    const step1 = await addItemCount(boxItem.id, 5, 5, 'Unidades', 'Caja abierta', true, undefined);
+    expect(step1?.receivedQuantity).toBe(1);
+    expect(step1?.looseUnitsReceived).toBe(5);
+    expect(step1?.status).toBe('parcial');
+
+    // Manual mark as complete
+    const step2 = await setItemManualComplete(boxItem.id, true);
+    expect(step2?.status).toBe('completo');
+    expect(step2?.manualCompleted).toBe(true);
+  });
+
+  it('Supports counting loose units with manual factor and auto-completing', async () => {
+    // 2 Boxes expected, manual factor 1 Caja = 12 Unidades -> 24 Units expected
+    const boxItem = {
+      ...testItem,
+      id: 'rec_box_2',
+      unitName: 'Caja',
+      unitNamePlural: 'Cajas',
+      expectedQuantity: 2,
+      receivedQuantity: 0,
+      looseUnitsReceived: 0
+    };
+    await saveReceptionWithItems(testReception, [boxItem]);
+
+    // Add 1 Box (12 units)
+    await addItemCount(boxItem.id, 1, 1, 'Caja', undefined, false, 12);
+    // Add 12 loose units (reaching 24 units = 2 boxes)
+    const step = await addItemCount(boxItem.id, 12, 12, 'Unidades', undefined, true, 12);
+
+    expect(step?.receivedQuantity).toBe(1);
+    expect(step?.looseUnitsReceived).toBe(12);
+    expect(step?.conversionActive).toBe(true);
+    expect(step?.conversionFactor).toBe(12);
+    expect(step?.status).toBe('completo'); // Auto-completed!
   });
 
   it('Closes reception, locks items, and auto-marks unreceived as missing', async () => {

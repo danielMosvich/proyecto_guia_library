@@ -33,21 +33,28 @@ export const CloseReceptionModal: React.FC<CloseReceptionModalProps> = ({
   const isIncomplete = zeroItems.length > 0 || partialItems.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
+        className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
+        {/* iOS Grabber */}
+        <div className="pt-2.5 pb-1 flex justify-center">
+          <div className="w-9 h-1 bg-[#D1D1D6] rounded-full" />
+        </div>
+
+        {/* Header (iOS Light) */}
+        <div className="px-4 py-2.5 bg-white text-[#1C1C1E] flex items-center justify-between border-b border-[#E5E5EA]">
           <div className="flex items-center gap-2">
-            <Lock className="w-5 h-5 text-emerald-400" />
+            <div className="p-1.5 rounded-xl bg-[#EBF9EE] text-[#34C759]">
+              <Lock className="w-5 h-5" />
+            </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Finalizar y Cerrar Recepción</h2>
-              <p className="text-[11px] text-slate-400">{reception.serieNumero} · {reception.proveedorNombre}</p>
+              <h2 className="text-sm font-bold text-[#1C1C1E]">Finalizar Recepción</h2>
+              <p className="text-[11px] text-[#8E8E93]">{reception.serieNumero} · {reception.proveedorNombre}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-[#F2F2F7] text-[#8E8E93]">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -55,25 +62,25 @@ export const CloseReceptionModal: React.FC<CloseReceptionModalProps> = ({
         {/* Validation Summary */}
         <div className="p-4 space-y-3.5 overflow-y-auto text-xs">
           <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <div className="text-2xl font-black text-emerald-700">{completeItems.length}</div>
-              <div className="text-[11px] font-semibold text-emerald-800">Conformes (100%)</div>
+            <div className="p-3 bg-[#EBF9EE] border border-[#D1F2D9] rounded-2xl">
+              <div className="text-2xl font-black text-[#34C759]">{completeItems.length}</div>
+              <div className="text-[11px] font-bold text-[#34C759]">Conformes (100%)</div>
             </div>
-            <div className={`p-3 rounded-xl border ${isIncomplete ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
-              <div className={`text-2xl font-black ${isIncomplete ? 'text-amber-700' : 'text-slate-700'}`}>
+            <div className={`p-3 rounded-2xl border ${isIncomplete ? 'bg-[#FFF4E5] border-[#FFE2BF]' : 'bg-[#F2F2F7] border-[#E5E5EA]'}`}>
+              <div className={`text-2xl font-black ${isIncomplete ? 'text-[#FF9500]' : 'text-[#8E8E93]'}`}>
                 {zeroItems.length + partialItems.length}
               </div>
-              <div className="text-[11px] font-semibold text-slate-700">Incompletos / Sin llegar</div>
+              <div className="text-[11px] font-bold text-[#1C1C1E]">Incompletos / Faltantes</div>
             </div>
           </div>
 
           {/* Warning banner if items remain missing */}
           {isIncomplete && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-2.5 items-start text-amber-900">
-              <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-3 bg-[#FFF4E5] border border-[#FFE2BF] rounded-2xl flex gap-2.5 items-start text-[#FF9500]">
+              <ShieldAlert className="w-5 h-5 text-[#FF9500] shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Hay {zeroItems.length + partialItems.length} producto(s) pendientes o con entrega parcial.</p>
-                <p className="text-[11px] text-amber-800 mt-0.5">
+                <p className="font-bold text-[#1C1C1E]">Hay {zeroItems.length + partialItems.length} producto(s) pendientes o con entrega parcial.</p>
+                <p className="text-[11px] text-[#8E8E93] mt-0.5">
                   {zeroItems.length} no registraron ningún ingreso y {partialItems.length} quedaron incompletos.
                 </p>
               </div>
@@ -81,38 +88,38 @@ export const CloseReceptionModal: React.FC<CloseReceptionModalProps> = ({
           )}
 
           {/* Breakdown checklist */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-            <div className="flex justify-between items-center text-slate-600">
+          <div className="p-3 bg-[#F2F2F7] rounded-2xl border border-[#E5E5EA] space-y-1.5">
+            <div className="flex justify-between items-center text-[#3A3A3C]">
               <span>Total de líneas en documento:</span>
-              <span className="font-bold text-slate-900">{standardItems.length}</span>
+              <span className="font-bold text-[#1C1C1E]">{standardItems.length}</span>
             </div>
             {zeroItems.length > 0 && (
-              <div className="flex justify-between items-center text-rose-700 font-medium">
+              <div className="flex justify-between items-center text-[#FF3B30] font-semibold">
                 <span>• No llegaron (0 recibidos):</span>
                 <span className="font-bold">{zeroItems.length}</span>
               </div>
             )}
             {partialItems.length > 0 && (
-              <div className="flex justify-between items-center text-amber-700 font-medium">
+              <div className="flex justify-between items-center text-[#FF9500] font-semibold">
                 <span>• Llegaron incompletos:</span>
                 <span className="font-bold">{partialItems.length}</span>
               </div>
             )}
             {observedItems.length > 0 && (
-              <div className="flex justify-between items-center text-rose-700 font-medium">
-                <span>• Con incidencias/observaciones:</span>
+              <div className="flex justify-between items-center text-[#FF3B30] font-semibold">
+                <span>• Con observaciones:</span>
                 <span className="font-bold">{observedItems.length}</span>
               </div>
             )}
             {surplusItems.length > 0 && (
-              <div className="flex justify-between items-center text-blue-700 font-medium">
+              <div className="flex justify-between items-center text-[#007AFF] font-semibold">
                 <span>• Sobrantes recibidos:</span>
                 <span className="font-bold">{surplusItems.length}</span>
               </div>
             )}
             {extraItems.length > 0 && (
-              <div className="flex justify-between items-center text-purple-700 font-medium">
-                <span>• Productos extras (no en guía):</span>
+              <div className="flex justify-between items-center text-[#AF52DE] font-semibold">
+                <span>• Productos extras:</span>
                 <span className="font-bold">{extraItems.length}</span>
               </div>
             )}
@@ -120,51 +127,51 @@ export const CloseReceptionModal: React.FC<CloseReceptionModalProps> = ({
 
           {/* Auto mark missing checkbox */}
           {isIncomplete && (
-            <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 bg-white cursor-pointer select-none">
+            <label className="flex items-start gap-2.5 p-3 rounded-2xl border border-[#E5E5EA] bg-white cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={autoMarkMissing}
                 onChange={(e) => setAutoMarkMissing(e.target.checked)}
-                className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                className="mt-0.5 w-4 h-4 text-[#34C759] rounded border-[#D1D1D6] focus:ring-[#34C759]"
               />
-              <span className="text-xs text-slate-700 leading-tight">
-                <strong>Marcar automáticamente como Faltante</strong> los ítems que no llegaron o quedaron incompletos (para el reclamo al proveedor).
+              <span className="text-xs text-[#1C1C1E] leading-tight">
+                <strong>Marcar automáticamente como Faltante</strong> los ítems pendientes o incompletos para el reporte al proveedor.
               </span>
             </label>
           )}
 
           {/* Supervisor closing notes */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Nota general de cierre / Datos del transportista:
+            <label className="block text-xs font-bold text-[#8E8E93] mb-1">
+              Nota de cierre / Datos del transportista:
             </label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ej. Chofer Manuel Torres, camión placa F3X-890. Entrega recibida en Almacén Central."
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder="Ej. Chofer Manuel Torres placa F3X-890. Entrega en Almacén Central."
+              className="w-full text-xs p-3 rounded-2xl border border-[#E5E5EA] bg-[#F2F2F7] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#34C759]/30 focus:border-[#34C759]"
             />
           </div>
 
-          <p className="text-[11px] text-slate-500 italic">
+          <p className="text-[11px] text-[#8E8E93] italic">
             Al cerrar, los botones de conteo se bloquearán para evitar toques involuntarios mientras guardas la mercadería en estantes.
           </p>
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+        <div className="p-4 bg-white border-t border-[#E5E5EA] flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 px-4 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 min-h-[48px]"
+            className="flex-1 py-3 px-4 border border-[#E5E5EA] text-[#3A3A3C] font-semibold rounded-2xl hover:bg-[#F2F2F7] min-h-[48px]"
           >
             Seguir revisando
           </button>
           <button
             type="button"
             onClick={() => onConfirmClose(notes, autoMarkMissing)}
-            className="flex-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 min-h-[48px]"
+            className="flex-2 py-3 px-4 bg-[#34C759] hover:bg-[#2EB84F] active:bg-[#28A745] text-white font-bold rounded-2xl shadow-xs flex items-center justify-center gap-2 min-h-[48px]"
           >
             <CheckCircle2 className="w-5 h-5" />
             <span>Confirmar y Cerrar</span>
